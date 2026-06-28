@@ -31,32 +31,32 @@ function label(t: VideoTask): string {
 
 function statusDot(t: VideoTask): string {
   switch (t.status) {
-    case 'running': return 'bg-violet-500'
-    case 'succeeded': return 'bg-green-500'
-    case 'failed': case 'cancelled': case 'expired': return 'bg-red-500'
-    default: return 'bg-gray-400'
+    case 'running': return 'bg-elysia-400 shadow-[0_0_5px_#FF87B2]'
+    case 'succeeded': return 'bg-teal-400 shadow-[0_0_5px_#2dd4bf]'
+    case 'failed': case 'cancelled': case 'expired': return 'bg-red-500 shadow-[0_0_5px_#ef4444]'
+    default: return 'bg-gray-500'
   }
 }
 </script>
 
 <template>
-  <div v-if="chain.length > 1" class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-    <div class="mb-2 text-xs font-medium text-gray-500">续帧链路（{{ chain.length }} 段）</div>
-    <div class="flex items-center gap-2 overflow-x-auto pb-1">
+  <div v-if="chain.length > 1" class="border border-tactical-700 bg-tactical-800 p-3 clip-chamfer">
+    <div class="mb-2 text-[10px] font-mono font-bold text-elysia-500 uppercase">SYS_CHAIN_LINK // {{ chain.length }} SEGMENTS</div>
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
       <template v-for="(t, i) in chain" :key="t.id">
         <button
-          class="flex shrink-0 flex-col items-center gap-1 rounded-lg border p-1.5 transition"
-          :class="t.id === activeId ? 'border-violet-500 bg-white shadow-sm' : 'border-gray-200 bg-white/60 hover:bg-white'"
+          class="flex shrink-0 flex-col items-center gap-1 clip-chamfer p-1.5 transition-all"
+          :class="t.id === activeId ? 'border border-elysia-400 bg-elysia-400/10 shadow-[0_0_8px_rgba(255,135,178,0.3)]' : 'border border-tactical-600 bg-tactical-900 hover:border-elysia-400/50'"
           @click="emit('select', t.id)"
         >
-          <div class="relative h-12 w-20 overflow-hidden rounded bg-black">
-            <img v-if="covers[t.id]" :src="covers[t.id]!" class="h-full w-full object-cover opacity-90" />
-            <span v-else class="flex h-full items-center justify-center text-[10px] text-gray-400">无预览</span>
-            <span class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full" :class="statusDot(t)" />
+          <div class="relative h-12 w-20 overflow-hidden bg-black border border-tactical-700">
+            <img v-if="covers[t.id]" :src="covers[t.id]!" class="h-full w-full object-cover opacity-80" />
+            <span v-else class="flex h-full items-center justify-center text-[10px] font-mono text-gray-500">N/A</span>
+            <span class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rotate-45" :class="statusDot(t)" />
           </div>
-          <span class="text-[10px] text-gray-500">{{ label(t) }}</span>
+          <span class="text-[9px] font-mono" :class="t.id === activeId ? 'text-elysia-300' : 'text-gray-500'">{{ label(t) }}</span>
         </button>
-        <span v-if="i < chain.length - 1" class="shrink-0 text-gray-300">→</span>
+        <span v-if="i < chain.length - 1" class="shrink-0 text-elysia-400 font-mono text-xs animate-pulse">>></span>
       </template>
     </div>
   </div>

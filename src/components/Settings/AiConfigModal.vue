@@ -113,50 +113,55 @@ function apply() {
 </script>
 
 <template>
-  <Modal :show="props.show" title="✨ AI 解析文档" width="680px" @close="emit('close')">
-    <div class="space-y-3">
-      <p class="text-xs text-gray-400">粘贴站点 API 文档内容、上传文档截图，或填文档 URL（经代理抓取）。将调用你在「AI 辅助」配置的大模型生成自定义请求模板。</p>
+  <Modal :show="props.show" title="✨ AI_PARSE_MODULE //" width="680px" @close="emit('close')">
+    <div class="space-y-4">
+      <p class="font-mono text-[10px] text-gray-500 leading-relaxed border-l-2 border-elysia-400 pl-2">
+        // 粘贴站点 API 文档内容、上传文档截图，或填文档 URL（经代理抓取）。将调用你在「AI 辅助」配置的大模型生成自定义请求模板。
+      </p>
 
-      <div class="flex gap-1">
-        <button v-for="t in [{k:'text',l:'粘贴内容'},{k:'image',l:'上传截图'},{k:'url',l:'文档 URL'}]" :key="t.k"
-          class="rounded-lg px-3 py-1.5 text-xs"
-          :class="mode === t.k ? 'bg-blue-500 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'"
-          @click="mode = t.k as typeof mode">{{ t.l }}</button>
+      <div class="flex gap-1 border border-tactical-700 bg-tactical-800 p-1 clip-chamfer w-fit">
+        <button v-for="t in [{k:'text',l:'TEXT_INPUT'},{k:'image',l:'IMAGE_UPLOAD'},{k:'url',l:'DOC_URL'}]" :key="t.k"
+          class="px-4 py-1.5 font-mono text-[10px] clip-chamfer transition-all"
+          :class="mode === t.k ? 'bg-elysia-400 text-tactical-900 font-bold shadow-[0_0_8px_rgba(255,135,178,0.4)]' : 'text-gray-500 hover:text-elysia-300'"
+          @click="mode = t.k as typeof mode">> {{ t.l }}</button>
       </div>
 
-      <textarea v-if="mode === 'text'" v-model="docText" rows="6" placeholder="粘贴 API 文档（endpoint / 请求体 / 响应体 / 状态枚举 / 字段路径）…" class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs" />
-      <div v-else-if="mode === 'image'" class="space-y-2">
-        <input type="file" accept="image/*" multiple class="text-xs" @change="onPickImages" />
+      <textarea v-if="mode === 'text'" v-model="docText" rows="6" placeholder=">_ Paste API documentation here..." class="w-full bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-xs p-3 clip-chamfer focus:border-elysia-400 outline-none" />
+
+      <div v-else-if="mode === 'image'" class="space-y-3 p-4 border border-dashed border-tactical-600 bg-tactical-900/50 clip-chamfer">
+        <input type="file" accept="image/*" multiple class="text-[10px] font-mono text-gray-400 file:bg-tactical-800 file:border file:border-tactical-600 file:text-elysia-400 file:px-3 file:py-1 file:clip-chamfer hover:file:bg-tactical-700 transition-colors" @change="onPickImages" />
         <div class="flex flex-wrap gap-2">
-          <div v-for="(img, i) in images" :key="i" class="relative">
-            <img :src="img" class="h-24 w-auto rounded border border-gray-200" />
-            <button class="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-xs text-white" @click="removeImage(i)">✕</button>
+          <div v-for="(img, i) in images" :key="i" class="relative group">
+            <img :src="img" class="h-24 w-auto object-cover border border-tactical-600 group-hover:border-elysia-400 transition-colors" />
+            <button class="absolute -right-1 -top-1 bg-red-900/80 text-red-400 border border-red-500 hover:bg-red-500 hover:text-tactical-900 px-1 text-[10px] font-mono clip-chamfer transition-colors" @click="removeImage(i)">✕</button>
           </div>
         </div>
       </div>
+
       <div v-else>
-        <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
-        <p class="mt-1 text-xs text-gray-400">需在「代理」中启用代理才能跨域抓取；失败请改用粘贴内容或截图。</p>
+        <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-xs px-3 py-2 clip-chamfer focus:border-elysia-400 outline-none" />
+        <p class="mt-1 font-mono text-[10px] text-gray-600">// 需在「代理」中启用代理才能跨域抓取；失败请改用粘贴内容或截图。</p>
       </div>
 
-      <button class="rounded-lg bg-blue-500 px-4 py-1.5 text-sm text-white hover:bg-blue-600 disabled:opacity-50" :disabled="loading" @click="parse">
-        {{ loading ? '解析中…' : '解析' }}
+      <button class="bg-elysia-400 text-tactical-900 font-mono font-bold text-xs px-6 py-2.5 clip-chamfer hover:bg-elysia-300 shadow-[0_0_10px_rgba(255,135,178,0.4)] transition-all disabled:opacity-50 disabled:grayscale" :disabled="loading" @click="parse">
+        {{ loading ? '> PROCESSING...' : '> INITIATE_PARSE' }}
       </button>
 
-      <div v-if="parsed" class="rounded-lg border border-gray-200 p-3 text-xs">
-        <div class="mb-2 font-medium text-gray-600">解析预览</div>
-        <div class="space-y-1 text-gray-700">
-          <div>模型：{{ parsed.model || '—' }}</div>
-          <div>提交 URL：{{ parsed.submit?.url || '—' }}</div>
-          <div>提交 body：<pre class="mt-1 max-h-32 overflow-auto rounded bg-gray-50 p-2 text-[11px]">{{ parsed.submit?.body }}</pre></div>
-          <div>轮询 URL：{{ parsed.poll?.url || '—' }}</div>
-          <div>taskId 路径：{{ parsed.response?.taskIdPath || '—' }}</div>
-          <div>状态路径：{{ parsed.response?.statusPath || '—' }}</div>
-          <div>成功值：{{ parsed.response?.successValues?.join(', ') || '—' }} / 失败值：{{ parsed.response?.failureValues?.join(', ') || '—' }}</div>
-          <div>视频 URL 路径：{{ parsed.response?.videoUrlPath || '—' }}</div>
-          <div v-if="parsed.notes">备注：{{ parsed.notes }}</div>
+      <div v-if="parsed" class="border border-elysia-400/30 bg-tactical-800 p-4 clip-chamfer mt-4">
+        <div class="font-mono text-[10px] font-bold text-elysia-500 border-b border-elysia-400/20 pb-1 mb-3">PARSE_RESULT_PREVIEW //</div>
+        <div class="space-y-1.5 font-mono text-[10px] text-gray-400">
+          <div><span class="text-gray-600">MODEL:</span> <span class="text-elysia-100">{{ parsed.model || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">SUBMIT_URL:</span> <span class="text-elysia-100">{{ parsed.submit?.url || 'N/A' }}</span></div>
+          <div class="pt-1"><span class="text-gray-600 block mb-1">SUBMIT_BODY:</span><pre class="max-h-32 overflow-auto bg-tactical-900 border border-tactical-700 p-2 text-elysia-300 clip-chamfer">{{ parsed.submit?.body }}</pre></div>
+          <div class="pt-2"><span class="text-gray-600">POLL_URL:</span> <span class="text-elysia-100">{{ parsed.poll?.url || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">TASK_ID_PATH:</span> <span class="text-elysia-100">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">STATUS_PATH:</span> <span class="text-elysia-100">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">SUCCESS_VALUES:</span> <span class="text-elysia-100">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">FAILURE_VALUES:</span> <span class="text-elysia-100">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">VIDEO_URL_PATH:</span> <span class="text-elysia-100">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
+          <div v-if="parsed.notes" class="text-elysia-400 mt-2 border-l-2 border-elysia-400 pl-2">NOTE: {{ parsed.notes }}</div>
         </div>
-        <button class="mt-3 rounded-lg bg-green-600 px-3 py-1.5 text-xs text-white hover:bg-green-700" @click="apply">应用到当前自定义源</button>
+        <button class="mt-4 border border-teal-500/50 bg-teal-900/20 text-teal-400 px-4 py-2 font-mono text-xs clip-chamfer hover:bg-teal-400 hover:text-tactical-900 transition-colors" @click="apply">> APPLY_TO_PROFILE</button>
       </div>
     </div>
   </Modal>

@@ -104,67 +104,78 @@ function onSelectChain(id: string) {
 </script>
 
 <template>
-  <Modal :show="props.show" title="任务详情" width="820px" @close="emit('close')">
+  <Modal :show="props.show" title="SYS_DETAIL_VIEW //" width="820px" @close="emit('close')">
     <div v-if="task" class="space-y-4">
       <!-- 视频播放 -->
-      <div class="aspect-video w-full overflow-hidden rounded-lg bg-black">
-        <video v-if="videoUrl" :src="videoUrl" controls autoplay class="h-full w-full object-contain" />
-        <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-contain opacity-80" />
-        <div v-else class="flex h-full items-center justify-center text-gray-400">无预览</div>
+      <div class="aspect-video w-full overflow-hidden clip-chamfer border-2 border-elysia-400/30 bg-tactical-900 relative group">
+        <div class="absolute inset-0 bg-sakura-pattern opacity-10 pointer-events-none"></div>
+        <video v-if="videoUrl" :src="videoUrl" controls autoplay class="h-full w-full object-contain relative z-10" />
+        <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-contain opacity-60 relative z-10" />
+        <div v-else class="flex h-full items-center justify-center text-elysia-400/30 font-mono text-xl tracking-widest relative z-10">NO_VISUAL_DATA</div>
+
+        <!-- 四角装饰 -->
+        <div class="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-elysia-400 z-20"></div>
+        <div class="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-elysia-400 z-20"></div>
+        <div class="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-elysia-400 z-20"></div>
+        <div class="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-elysia-400 z-20"></div>
       </div>
 
       <!-- 续帧链 -->
       <TaskChain :chain="chain" :active-id="task.id" @select="onSelectChain" />
 
       <!-- 提示词 -->
-      <div>
-        <div class="mb-1 text-xs font-medium text-gray-500">提示词</div>
-        <p class="rounded-lg bg-gray-50 p-3 text-sm text-gray-800 whitespace-pre-wrap">{{ task.prompt || '（无）' }}</p>
+      <div class="glass-elysia p-3 clip-chamfer border border-tactical-border relative overflow-hidden">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-elysia-400"></div>
+        <div class="mb-1 text-[10px] font-mono font-bold text-elysia-500 uppercase ml-2">PROMPT_DATA //</div>
+        <p class="text-sm text-elysia-50 whitespace-pre-wrap ml-2 font-sans">{{ task.prompt || 'NO_PROMPT_DATA' }}</p>
       </div>
 
       <!-- 参数表 -->
-      <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
-        <div><span class="text-gray-400">模型</span><br>{{ modelLabel }}</div>
-        <div><span class="text-gray-400">比例</span><br>{{ task.params.ratio }}</div>
-        <div><span class="text-gray-400">分辨率</span><br>{{ task.params.resolution }}</div>
-        <div><span class="text-gray-400">时长</span><br>{{ task.params.duration }}s</div>
-        <div><span class="text-gray-400">Seed</span><br>{{ task.params.seed ?? '随机' }}</div>
-        <div><span class="text-gray-400">生成音频</span><br>{{ task.params.generateAudio ? '是' : '否' }}</div>
-        <div><span class="text-gray-400">返回末帧</span><br>{{ task.params.returnLastFrame ? '是' : '否' }}</div>
-        <div><span class="text-gray-400">联网搜索</span><br>{{ task.params.webSearch ? '是' : '否' }}</div>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4 bg-tactical-800 p-3 clip-chamfer border border-tactical-700">
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">MODEL</span><span class="font-mono text-xs text-elysia-100">{{ modelLabel }}</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">RATIO</span><span class="font-mono text-xs text-elysia-100">{{ task.params.ratio }}</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">RES</span><span class="font-mono text-xs text-elysia-100">{{ task.params.resolution }}</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">DURATION</span><span class="font-mono text-xs text-elysia-100">{{ task.params.duration }}s</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">SEED</span><span class="font-mono text-xs text-elysia-100">{{ task.params.seed ?? 'RANDOM' }}</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">AUDIO_GEN</span><span class="font-mono text-xs text-elysia-100">{{ task.params.generateAudio ? 'TRUE' : 'FALSE' }}</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">LAST_FRAME</span><span class="font-mono text-xs text-elysia-100">{{ task.params.returnLastFrame ? 'TRUE' : 'FALSE' }}</span></div>
+        <div><span class="text-[10px] font-mono text-gray-500 block mb-0.5">WEB_SEARCH</span><span class="font-mono text-xs text-elysia-100">{{ task.params.webSearch ? 'TRUE' : 'FALSE' }}</span></div>
       </div>
 
       <!-- 状态 -->
-      <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-500">
-        <span>状态：{{ task.status }}</span>
-        <span>耗时：{{ elapsedSec }}s</span>
-        <span>素材：{{ task.assetIds.length }} 个</span>
-        <span v-if="task.remoteTaskId">远程 ID：{{ task.remoteTaskId.slice(0, 12) }}…</span>
+      <div class="flex flex-wrap gap-x-6 gap-y-1 text-[10px] font-mono text-gray-500 uppercase">
+        <span>STATUS: <span class="text-elysia-400">{{ task.status }}</span></span>
+        <span>ELAPSED: <span class="text-elysia-400">{{ elapsedSec }}s</span></span>
+        <span>ASSETS: <span class="text-elysia-400">{{ task.assetIds.length }}</span></span>
+        <span v-if="task.remoteTaskId">REMOTE_ID: <span class="text-elysia-400">{{ task.remoteTaskId.slice(0, 12) }}…</span></span>
       </div>
-      <p v-if="task.error" class="rounded-lg bg-red-50 p-2 text-xs text-red-600">{{ task.error }}</p>
-      <div v-if="task.errorDetails && Object.keys(task.errorDetails).length" class="rounded-lg bg-gray-50 p-2 text-xs text-gray-600">
-        <div class="mb-1 font-medium text-gray-500">诊断信息</div>
+
+      <div v-if="task.error" class="border border-red-500/50 bg-red-900/20 p-2 text-xs text-red-400 clip-chamfer font-mono">
+        >> ERR_MSG: {{ task.error }}
+      </div>
+      <div v-if="task.errorDetails && Object.keys(task.errorDetails).length" class="border border-tactical-600 bg-tactical-800 p-2 text-xs text-gray-400 clip-chamfer font-mono">
+        <div class="mb-1 font-bold text-elysia-500">>> DIAGNOSTIC_DATA</div>
         <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
           <template v-for="(val, key) in task.errorDetails" :key="key">
-            <span class="text-gray-400">{{ key }}</span>
-            <span class="break-all">{{ typeof val === 'object' ? JSON.stringify(val) : val }}</span>
+            <span class="text-gray-500">{{ key }}</span>
+            <span class="break-all text-gray-300">{{ typeof val === 'object' ? JSON.stringify(val) : val }}</span>
           </template>
         </div>
       </div>
 
       <!-- 末帧预览 -->
-      <div v-if="lastFrameUrl" class="flex items-center gap-3">
-        <img :src="lastFrameUrl" class="h-16 w-24 rounded border border-gray-200 object-cover" />
-        <span class="text-xs text-gray-500">末帧（可用于续帧）</span>
+      <div v-if="lastFrameUrl" class="flex items-center gap-3 border border-tactical-700 bg-tactical-800 p-2 clip-chamfer">
+        <img :src="lastFrameUrl" class="h-16 w-24 object-cover border border-elysia-400/50" />
+        <span class="text-[10px] font-mono text-elysia-400/80 uppercase">SYS_LAST_FRAME_SAVED<br/>> READY_FOR_CHAIN</span>
       </div>
 
       <!-- 操作 -->
-      <div class="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-        <button v-if="task.status === 'succeeded'" class="rounded-lg bg-violet-600 px-3 py-1.5 text-sm text-white hover:bg-violet-700" @click="download">下载视频</button>
-        <button v-if="task.status === 'succeeded' && task.lastFrameImageId" class="rounded-lg border border-violet-300 px-3 py-1.5 text-sm text-violet-600 hover:bg-violet-50" @click="continueFrame">续帧</button>
-        <button class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50" @click="reuseConfig">复用配置</button>
-        <button v-if="task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired'" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50" @click="retry">重试</button>
-        <button class="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50" @click="remove">删除</button>
+      <div class="flex flex-wrap gap-2 pt-2 border-t border-elysia-400/20">
+        <button v-if="task.status === 'succeeded'" class="bg-elysia-400 text-tactical-900 px-4 py-2 font-mono text-xs font-bold clip-chamfer hover:bg-elysia-300 transition-colors shadow-[0_0_10px_rgba(255,135,178,0.4)]" @click="download">> DOWNLOAD_VIDEO</button>
+        <button v-if="task.status === 'succeeded' && task.lastFrameImageId" class="border border-teal-500/50 bg-teal-900/20 text-teal-400 px-4 py-2 font-mono text-xs clip-chamfer hover:bg-teal-400 hover:text-tactical-900 transition-colors" @click="continueFrame">> CHAIN_FRAME</button>
+        <button class="border border-tactical-500 bg-tactical-800 text-gray-300 px-4 py-2 font-mono text-xs clip-chamfer hover:border-elysia-400 hover:text-elysia-300 transition-colors" @click="reuseConfig">> CLONE_CFG</button>
+        <button v-if="task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired'" class="border border-tactical-500 bg-tactical-800 text-gray-300 px-4 py-2 font-mono text-xs clip-chamfer hover:border-elysia-400 hover:text-elysia-300 transition-colors" @click="retry">> RETRY_EXEC</button>
+        <button class="border border-red-900/50 bg-tactical-800 text-red-500 px-4 py-2 font-mono text-xs clip-chamfer hover:bg-red-900/40 transition-colors ml-auto" @click="remove">> PURGE_RECORD</button>
       </div>
     </div>
   </Modal>

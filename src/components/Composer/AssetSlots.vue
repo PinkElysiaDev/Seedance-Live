@@ -2,85 +2,65 @@
 import { computed, ref } from 'vue'
 import { useComposerStore } from '@/stores/composer'
 import { useToastStore } from '@/stores/toast'
-import { ingestFile, ingestUrl, fileMatchesRole } from '@/lib/asset'
-import { SEEDANCE_REFERENCE_LIMITS, MODEL_META } from '@/config/models'
+import { ingestFile, fileMatchesRole } from '@/lib/asset'
+import { SEEDANCE_REFERENCE_LIMITS } from '@/config/models'
 import type { AssetRole, StoredAsset } from '@/types'
 
 const composer = useComposerStore()
 const toast = useToastStore()
 
-interface SlotDef {
-  role: AssetRole
-  label: string
-  max: number
-  accept: string
-}
-
-const slots: SlotDef[] = [
-  { role: 'firstFrame', label: '首帧', max: 1, accept: 'image/*' },
-  { role: 'lastFrame', label: '尾帧', max: 1, accept: 'image/*' },
-  { role: 'referenceImage', label: '参考图', max: SEEDANCE_REFERENCE_LIMITS.images, accept: 'image/*' },
-  { role: 'referenceVideo', label: '参考视频', max: SEEDANCE_REFERENCE_LIMITS.videos, accept: 'video/mp4,video/quicktime' },
-  { role: 'referenceAudio', label: '参考音频', max: SEEDANCE_REFERENCE_LIMITS.audios, accept: 'audio/mpeg,audio/wav,.mp3,.wav' },
-]
+// 仅用内部状态实现 Mode A(Reference) 和 Mode B(Keyframe)
+const activeMode = ref<'REF_MODE' | 'KEYFRAME_MODE'>('REF_MODE')
 
 const fileInputs = ref<Record<string, HTMLInputElement | null>>({})
-const urlInputs = ref<Record<string, string>>({})
-
-// 首尾帧启用时禁用参考视频/音频
-const hasFirstLast = computed(() =>
-  composer.assets.some((a) => a.role === 'firstFrame' || a.role === 'lastFrame'),
-)
 
 function assetsOf(role: AssetRole): StoredAsset[] {
   return composer.assets.filter((a) => a.role === role)
 }
 
-function slotDisabled(role: AssetRole): boolean {
-  if ((role === 'referenceVideo' || role === 'referenceAudio') && hasFirstLast.value) return true
-  return false
-}
+const refAssets = computed(() => [
+  ...assetsOf('referenceImage'),
+  ...assetsOf('referenceVideo'),
+  ...assetsOf('referenceAudio')
+])
 
-async function handleFiles(role: AssetRole, files: FileList | null) {
+async function handleFiles(role: AssetRole, files: FileList | null, autoRole: boolean = false) {
   if (!files || !files.length) return
-  if (slotDisabled(role)) {
-    toast.show('首尾帧与参考视频/音频不能同时使用', 'error')
-    return
-  }
-  const existing = assetsOf(role).length
-  const slot = slots.find((s) => s.role === role)!
-  const remaining = slot.max - existing
-  const arr = Array.from(files).slice(0, remaining)
-  for (const file of arr) {
-    if (!fileMatchesRole(file, role)) {
-      toast.show(`${file.name} 类型不匹配该槽位`, 'error')
+
+  // 对于 REF_MODE 的大池子拖拽，我们自动推断角色
+  for (const file of Array.from(files)) {
+    let targetRole = role
+    if (autoRole) {
+      if (file.type.startsWith('video/')) targetRole = 'referenceVideo'
+      else if (file.type.startsWith('audio/')) targetRole = 'referenceAudio'
+      else targetRole = 'referenceImage'
+    }
+
+    if (!fileMatchesRole(file, targetRole)) {
+      toast.show(`${file.name} 类型不匹配`, 'error')
       continue
     }
+
+    // 检查限制
+    let max = 1
+    if (targetRole === 'referenceImage') max = SEEDANCE_REFERENCE_LIMITS.images
+    if (targetRole === 'referenceVideo') max = SEEDANCE_REFERENCE_LIMITS.videos
+    if (targetRole === 'referenceAudio') max = SEEDANCE_REFERENCE_LIMITS.audios
+
+    if (assetsOf(targetRole).length >= max) {
+      toast.show(`${targetRole} 已达上限`, 'error')
+      continue
+    }
+
     try {
-      const asset = await ingestFile(file, role)
+      const asset = await ingestFile(file, targetRole)
       composer.addAsset(asset)
     } catch (err) {
       toast.show(`素材 ${file.name} 处理失败：${err instanceof Error ? err.message : String(err)}`, 'error')
     }
   }
-  // 重置 input 以便重复选同一文件
-  if (fileInputs.value[role]) fileInputs.value[role]!.value = ''
-}
 
-async function addUrl(role: AssetRole) {
-  const url = urlInputs.value[role]?.trim()
-  if (!url) return
-  if (slotDisabled(role)) {
-    toast.show('首尾帧与参考视频/音频不能同时使用', 'error')
-    return
-  }
-  try {
-    const asset = await ingestUrl(url, role)
-    composer.addAsset(asset)
-    urlInputs.value[role] = ''
-  } catch (err) {
-    toast.show(`URL 添加失败：${err instanceof Error ? err.message : String(err)}`, 'error')
-  }
+  if (fileInputs.value[role]) fileInputs.value[role]!.value = ''
 }
 
 function assetLabel(a: StoredAsset): string {
@@ -88,64 +68,108 @@ function assetLabel(a: StoredAsset): string {
   if (a.durationMs) return `${a.name} (${(a.durationMs / 1000).toFixed(1)}s)`
   return a.name
 }
-
-const isFace = computed(() => MODEL_META[composer.params.model].face)
 </script>
 
 <template>
-  <div class="space-y-2">
-    <div v-if="hasFirstLast" class="rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
-      首尾帧已启用，参考视频/音频已禁用
-    </div>
-    <div v-if="isFace" class="rounded-md bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
-      Face 模型不支持 asset://，请使用公网 URL 或本地文件
-    </div>
-    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <div
-        v-for="slot in slots"
-        :key="slot.role"
-        class="rounded-lg border border-gray-200 p-2"
-        :class="{ 'opacity-40': slotDisabled(slot.role) }"
+  <div class="space-y-4">
+    <!-- Mode Switcher -->
+    <div class="flex gap-1 bg-gray-200 dark:bg-tactical-700 p-1 clip-chamfer w-fit border border-elysia-400/30 dark:border-elysia-400/30 shadow-[inset_0_0_8px_rgba(20,17,20,0.1)] dark:shadow-[inset_0_0_8px_rgba(20,17,20,0.5)]">
+      <button
+        class="px-6 py-2 font-sans italic font-bold text-sm tracking-wide transition-all duration-300 clip-chamfer"
+        :class="activeMode === 'REF_MODE' ? 'bg-elysia-400 text-tactical-900 shadow-[0_0_10px_rgba(255,135,178,0.5)]' : 'text-gray-600 dark:text-gray-400 hover:text-elysia-500 dark:hover:text-elysia-100'"
+        @click="activeMode = 'REF_MODE'"
       >
-        <div class="mb-1 flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-600">{{ slot.label }}</span>
-          <span class="text-xs text-gray-400">{{ assetsOf(slot.role).length }}/{{ slot.max }}</span>
-        </div>
-        <div class="flex flex-col gap-1">
-          <button
-            class="rounded border border-dashed border-gray-300 px-2 py-1.5 text-xs text-gray-500 hover:border-violet-400 hover:text-violet-600"
-            :disabled="slotDisabled(slot.role) || assetsOf(slot.role).length >= slot.max"
-            @click="fileInputs[slot.role]?.click()"
-          >
-            + 上传 / 拖入
-          </button>
-          <input
-            :ref="(el) => (fileInputs[slot.role] = el as HTMLInputElement | null)"
-            type="file"
-            :accept="slot.accept"
-            :multiple="slot.max > 1"
-            class="hidden"
-            @change="handleFiles(slot.role, ($event.target as HTMLInputElement).files)"
-          />
-          <div class="flex gap-1">
-            <input
-              v-model="urlInputs[slot.role]"
-              placeholder="粘贴公网 URL"
-              class="w-full rounded border border-gray-300 px-1.5 py-1 text-xs"
-              :disabled="slotDisabled(slot.role) || assetsOf(slot.role).length >= slot.max"
-              @keydown.enter="addUrl(slot.role)"
-            />
-            <button
-              class="rounded border border-gray-300 px-2 text-xs hover:bg-gray-50"
-              :disabled="slotDisabled(slot.role) || assetsOf(slot.role).length >= slot.max"
-              @click="addUrl(slot.role)"
-            >+</button>
+        REF_MODE
+      </button>
+      <button
+        class="px-6 py-2 font-sans italic font-bold text-sm tracking-wide transition-all duration-300 clip-chamfer"
+        :class="activeMode === 'KEYFRAME_MODE' ? 'bg-elysia-400 text-tactical-900 shadow-[0_0_10px_rgba(255,135,178,0.5)]' : 'text-gray-600 dark:text-gray-400 hover:text-elysia-500 dark:hover:text-elysia-100'"
+        @click="activeMode = 'KEYFRAME_MODE'"
+      >
+        KEYFRAME_MODE
+      </button>
+    </div>
+
+    <!-- Mode A: Reference Mode -->
+    <div v-if="activeMode === 'REF_MODE'" class="w-full">
+      <div
+        class="w-full border-2 border-dashed border-elysia-400/40 bg-gray-100/50 dark:bg-tactical-800/50 clip-chamfer-lg p-8 flex flex-col items-center justify-center hover:bg-elysia-400/10 hover:border-elysia-400 transition-colors cursor-pointer group relative overflow-hidden"
+        @click="fileInputs['refPool']?.click()"
+      >
+        <div class="absolute inset-0 bg-sakura-pattern opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+        <div class="relative z-10 text-elysia-400 font-mono mb-2 group-hover:animate-pulse font-bold tracking-widest">>> INGEST_ASSETS <<</div>
+        <p class="relative z-10 text-gray-500 font-mono text-xs group-hover:text-elysia-600 dark:group-hover:text-elysia-100 transition-colors">把图片、视频或音频交给我吧♪</p>
+        <input
+          :ref="(el) => (fileInputs['refPool'] = el as HTMLInputElement | null)"
+          type="file"
+          accept="image/*,video/mp4,video/quicktime,audio/mpeg,audio/wav,.mp3,.wav"
+          multiple
+          class="hidden"
+          @change="handleFiles('referenceImage', ($event.target as HTMLInputElement).files, true)"
+        />
+      </div>
+
+      <!-- File Pool Display -->
+      <div v-if="refAssets.length > 0" class="mt-4 flex flex-col gap-2">
+        <div v-for="a in refAssets" :key="a.id" class="flex items-center justify-between p-2 border border-gray-300 dark:border-tactical-700 bg-gray-100 dark:bg-tactical-800 clip-chamfer">
+          <div class="flex items-center gap-3 truncate">
+            <span class="text-[10px] font-mono px-1.5 py-0.5 clip-chamfer-reverse bg-elysia-400/20 text-elysia-300 border border-elysia-400/30 dark:border-elysia-400/30">
+              {{ a.role.replace('reference', '').toUpperCase() }}
+            </span>
+            <span class="text-xs font-mono text-gray-800 dark:text-elysia-50 truncate" :title="a.name">{{ assetLabel(a) }}</span>
           </div>
-          <div v-for="a in assetsOf(slot.role)" :key="a.id" class="flex items-center justify-between gap-1 text-xs text-gray-600">
-            <span class="truncate" :title="a.name">{{ assetLabel(a) }}</span>
-            <button class="text-gray-400 hover:text-red-500" @click="composer.removeAsset(a.id)">✕</button>
-          </div>
+          <button class="text-gray-500 hover:text-elysia-400 hover:scale-110 transition-all font-mono text-sm ml-2" @click="composer.removeAsset(a.id)">✕</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Mode B: Keyframe Mode -->
+    <div v-if="activeMode === 'KEYFRAME_MODE'" class="flex items-center gap-4 w-full">
+      <!-- Start Frame Slot -->
+      <div
+        class="flex-1 border border-elysia-400/50 bg-gray-100 dark:bg-tactical-800 clip-chamfer p-4 relative h-32 flex flex-col items-center justify-center hover:border-elysia-400 cursor-pointer group transition-colors overflow-hidden"
+        @click="fileInputs['firstFrame']?.click()"
+      >
+        <span class="absolute top-0 left-0 bg-elysia-400 text-tactical-900 font-mono text-[10px] px-2 font-bold z-10">SYS_START</span>
+        <div v-if="assetsOf('firstFrame')[0]" class="relative z-10 flex flex-col items-center w-full">
+           <span class="text-elysia-50 font-mono text-xs truncate max-w-[90%] bg-white/80 dark:bg-tactical-900/80 px-2 py-1">{{ assetsOf('firstFrame')[0].name }}</span>
+           <button class="mt-2 text-[10px] border border-elysia-400/50 text-elysia-400 hover:bg-elysia-400 hover:text-tactical-900 px-2 py-0.5 clip-chamfer transition-colors" @click.stop="composer.removeAsset(assetsOf('firstFrame')[0].id)">REMOVE</button>
+        </div>
+        <span v-else class="text-elysia-400/50 font-mono text-sm group-hover:text-elysia-300 relative z-10 transition-colors">+ 接入首帧 (START FRAME)</span>
+
+        <input
+          :ref="(el) => (fileInputs['firstFrame'] = el as HTMLInputElement | null)"
+          type="file"
+          accept="image/*"
+          class="hidden"
+          @change="handleFiles('firstFrame', ($event.target as HTMLInputElement).files)"
+        />
+      </div>
+
+      <!-- Visual Timeline 连线 (水晶光流) -->
+      <div class="w-16 h-[2px] bg-gradient-to-r from-elysia-500 to-elysia-300 relative neon-glow-pink">
+        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full animate-ping shadow-[0_0_8px_#FFF]"></div>
+      </div>
+
+      <!-- End Frame Slot -->
+      <div
+        class="flex-1 border border-elysia-400/50 bg-gray-100 dark:bg-tactical-800 clip-chamfer p-4 relative h-32 flex flex-col items-center justify-center hover:border-elysia-400 cursor-pointer group transition-colors overflow-hidden"
+        @click="fileInputs['lastFrame']?.click()"
+      >
+        <span class="absolute bottom-0 right-0 bg-elysia-500 text-white font-mono text-[10px] px-2 font-bold z-10">SYS_END</span>
+        <div v-if="assetsOf('lastFrame')[0]" class="relative z-10 flex flex-col items-center w-full">
+           <span class="text-elysia-50 font-mono text-xs truncate max-w-[90%] bg-white/80 dark:bg-tactical-900/80 px-2 py-1">{{ assetsOf('lastFrame')[0].name }}</span>
+           <button class="mt-2 text-[10px] border border-elysia-400/50 text-elysia-400 hover:bg-elysia-400 hover:text-tactical-900 px-2 py-0.5 clip-chamfer transition-colors" @click.stop="composer.removeAsset(assetsOf('lastFrame')[0].id)">REMOVE</button>
+        </div>
+        <span v-else class="text-elysia-400/50 font-mono text-sm group-hover:text-elysia-300 relative z-10 transition-colors">+ 接入尾帧 (END FRAME)</span>
+
+        <input
+          :ref="(el) => (fileInputs['lastFrame'] = el as HTMLInputElement | null)"
+          type="file"
+          accept="image/*"
+          class="hidden"
+          @change="handleFiles('lastFrame', ($event.target as HTMLInputElement).files)"
+        />
       </div>
     </div>
   </div>

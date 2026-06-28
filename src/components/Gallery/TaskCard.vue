@@ -122,8 +122,19 @@ function reuseConfig() {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-    <div class="relative aspect-video cursor-pointer bg-black" @click="emit('open')">
+  <div class="flex flex-col border border-tactical-border glass-elysia clip-chamfer p-1 relative overflow-hidden group hover:border-elysia-400 transition-colors">
+    <!-- 状态指示灯条 -->
+    <div
+      class="absolute left-0 top-0 bottom-0 w-1 transition-all"
+      :class="{
+        'bg-elysia-400 animate-pulse neon-glow-pink': isRunning,
+        'bg-teal-400 shadow-[0_0_8px_#2dd4bf]': task.status === 'succeeded',
+        'bg-red-500 shadow-[0_0_8px_#ef4444]': task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired',
+        'bg-gray-500': task.status === 'queued'
+      }"
+    ></div>
+
+    <div class="h-40 bg-gray-100 dark:bg-tactical-900 m-1 relative flex items-center justify-center border border-gray-300 dark:border-tactical-700 cursor-pointer overflow-hidden group-hover:border-elysia-400/50" @click="emit('open')">
       <video
         v-if="videoUrl && task.status === 'succeeded'"
         :src="videoUrl"
@@ -131,40 +142,45 @@ function reuseConfig() {
         class="h-full w-full object-contain"
         @click.stop="emit('open')"
       />
-      <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-contain opacity-80" />
-      <div v-else class="flex h-full items-center justify-center text-gray-500">
-        <span class="text-sm">无预览</span>
+      <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+      <div v-else class="flex flex-col h-full items-center justify-center text-elysia-500/50 dark:text-elysia-400/50">
+        <span class="font-mono text-xs">{{ isRunning ? 'PROCESSING_CRYSTAL...' : 'NO_VISUAL_DATA' }}</span>
       </div>
 
-      <div v-if="isRunning" class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-        <div class="flex items-center justify-between text-xs text-white">
-          <span>{{ statusText }}</span>
-          <span class="text-right text-[11px] text-white/80">{{ remoteHint }}</span>
+      <div v-if="isRunning" class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-100 dark:from-tactical-900 to-transparent p-2 border-t border-elysia-400/30">
+        <div class="flex items-center justify-between font-mono text-[10px] text-gray-800 dark:text-elysia-50">
+          <span>> {{ statusText }}</span>
+          <span class="text-right opacity-80">{{ remoteHint }}</span>
         </div>
-        <div v-if="estimatedProgress != null" class="mt-1 h-1 overflow-hidden rounded bg-white/30">
-          <div class="h-full bg-violet-400 transition-all duration-1000" :style="{ width: `${estimatedProgress}%` }" />
+        <div v-if="estimatedProgress != null" class="mt-1 flex gap-0.5">
+          <div
+            v-for="i in 20" :key="i"
+            class="h-1 flex-1 bg-elysia-400/20"
+            :class="{ 'bg-elysia-400 neon-glow-pink': i * 5 <= estimatedProgress }"
+          ></div>
         </div>
       </div>
     </div>
 
-    <div class="p-3">
-      <div class="mb-1 flex items-center justify-between">
-        <span class="text-xs font-medium" :class="statusColor">{{ statusText }}</span>
-        <span class="text-xs text-gray-400">{{ modelLabel }} · {{ task.params.ratio }} · {{ task.params.duration }}s</span>
+    <div class="p-2 flex flex-col gap-1 pl-3">
+      <div class="flex justify-between items-center mb-1">
+        <div class="font-mono text-[10px] truncate uppercase font-bold" :class="statusColor">SYS_STATUS: {{ statusText }} //</div>
+        <span class="font-mono text-[10px] text-gray-600 dark:text-gray-500 border border-gray-300 dark:border-gray-700 px-1 bg-gray-100 dark:bg-tactical-900">{{ modelLabel }} · {{ task.params.ratio }} · {{ task.params.duration }}s</span>
       </div>
-      <p class="line-clamp-2 text-sm text-gray-700" :title="task.prompt">{{ task.prompt || '（无提示词）' }}</p>
-      <p v-if="task.error" class="mt-1 line-clamp-2 text-xs text-red-500">
-        {{ task.error }}
-        <span v-if="task.errorDetails?.quota_refunded" class="ml-1 text-green-600">（额度已退还）</span>
-      </p>
+      <div class="font-sans text-sm text-gray-800 dark:text-elysia-50 line-clamp-2 leading-relaxed" :title="task.prompt">{{ task.prompt || 'NO_PROMPT_DATA' }}</div>
 
-      <div class="mt-2 flex flex-wrap gap-1.5 text-xs">
-        <button v-if="isRunning" class="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" @click="cancel">取消</button>
-        <button v-if="task.status === 'succeeded'" class="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" @click="download">下载</button>
-        <button v-if="task.status === 'succeeded' && task.lastFrameImageId" class="rounded border border-violet-300 px-2 py-1 text-violet-600 hover:bg-violet-50" @click="continueFrame">续帧</button>
-        <button class="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" @click="reuseConfig">复用</button>
-        <button v-if="task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired'" class="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" @click="retry">重试</button>
-        <button class="rounded border border-gray-300 px-2 py-1 text-red-500 hover:bg-red-50" @click="remove">删除</button>
+      <div v-if="task.error" class="mt-1 font-mono text-[10px] text-red-600 dark:text-red-400 border border-red-500/30 bg-red-100 dark:bg-red-900/20 px-2 py-1 line-clamp-2 clip-chamfer">
+        ERR: {{ task.error }}
+        <span v-if="task.errorDetails?.quota_refunded" class="text-elysia-600 dark:text-elysia-300 ml-1"> [QUOTA_REFUNDED]</span>
+      </div>
+
+      <div class="mt-2 flex flex-wrap gap-1">
+        <button v-if="isRunning" class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-red-500 hover:text-red-500 transition-colors clip-chamfer" @click="cancel">ABORT</button>
+        <button v-if="task.status === 'succeeded'" class="font-mono text-[10px] border border-elysia-400/50 bg-elysia-50 dark:bg-elysia-400/10 text-elysia-600 dark:text-elysia-300 px-2 py-1 hover:border-elysia-500 hover:bg-elysia-100 dark:hover:border-elysia-400 dark:hover:bg-elysia-400 dark:hover:text-tactical-900 transition-colors clip-chamfer" @click="download">DOWNLOAD</button>
+        <button v-if="task.status === 'succeeded' && task.lastFrameImageId" class="font-mono text-[10px] border border-teal-500/50 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 px-2 py-1 hover:border-teal-600 hover:bg-teal-100 dark:hover:border-teal-400 dark:hover:bg-teal-400 dark:hover:text-tactical-900 transition-colors clip-chamfer" @click="continueFrame">CHAIN_FRAME</button>
+        <button class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-elysia-500 hover:text-elysia-600 dark:hover:border-elysia-400 dark:hover:text-elysia-300 transition-colors clip-chamfer" @click="reuseConfig">CLONE_CFG</button>
+        <button v-if="task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired'" class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-elysia-500 hover:text-elysia-600 dark:hover:border-elysia-400 dark:hover:text-elysia-300 transition-colors clip-chamfer" @click="retry">RETRY</button>
+        <button class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:border-red-500 dark:hover:text-red-500 dark:hover:bg-red-900/20 transition-colors clip-chamfer ml-auto" @click="remove">DELETE</button>
       </div>
     </div>
   </div>
