@@ -1,25 +1,216 @@
 <template>
-  <div class="h-full flex overflow-hidden">
-    <!-- Action Axis (Left) -->
-    <div class="w-1/3 min-w-[320px] max-w-[480px] h-full flex flex-col border-r-2 border-elysia-400/30 bg-tactical-800/90 p-4 space-y-4 overflow-y-auto">
+  <div class="h-full flex overflow-hidden w-full relative">
+    <!-- Split Screen Layout -->
+
+    <!-- Left Side: Controls -->
+    <div class="w-[450px] flex-shrink-0 h-full flex flex-col bg-ak-dark/80 backdrop-blur-sm border-r border-gray-800 p-8 overflow-y-auto hide-scrollbar z-10 shadow-[5px_0_15px_rgba(0,0,0,0.5)]">
+
+      <!-- Top: Provider Selector Dropdown -->
+      <div class="provider-dropdown-root mb-8 border-b border-gray-700 pb-4 relative">
+        <div class="font-sans font-bold text-gray-500 tracking-widest text-xs mb-1 uppercase">CURRENT_PROVIDER</div>
+        <div
+          class="flex items-center justify-between group cursor-pointer hover:text-ak-400 transition-colors"
+          @click="providerOpen = !providerOpen"
+        >
+          <span class="font-sans font-black text-white text-xl tracking-wider group-hover:text-ak-400 transition-colors uppercase truncate">
+            {{ activeProfile?.name || 'NO_PROVIDER' }} // <span class="font-mono font-normal text-xs text-gray-500 group-hover:text-ak-400/80 transition-colors normal-case tracking-normal">{{ modelLabel }}</span>
+          </span>
+          <span class="font-mono text-gray-500 transition-transform" :class="{ 'rotate-180': providerOpen }">▼</span>
+        </div>
+
+        <!-- 渠道商切换下拉 -->
+        <div
+          v-if="providerOpen"
+          class="absolute left-0 right-0 top-full mt-2 z-30 bg-ak-dark border border-gray-700 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+        >
+          <div class="px-4 py-2 font-sans font-bold text-gray-500 tracking-widest text-[10px] uppercase border-b border-gray-800">
+            SELECT_PROVIDER
+          </div>
+          <button
+            v-for="p in settings.settings.profiles"
+            :key="p.id"
+            class="group relative flex items-center justify-between w-full text-left px-4 py-3 transition-colors"
+            :class="p.id === activeProfile?.id ? 'bg-ak-400/10 text-ak-400' : 'text-gray-300 hover:bg-ak-gray hover:text-white'"
+            @click="selectProvider(p.id)"
+          >
+            <span class="flex flex-col min-w-0">
+              <span class="font-sans font-bold text-sm tracking-wider uppercase truncate">{{ p.name }}</span>
+              <span class="font-mono text-[10px] text-gray-500 truncate">{{ p.kind === 'seedance' ? 'SEEDANCE' : 'CUSTOM' }} · {{ p.baseUrl || '—' }}</span>
+            </span>
+            <span v-if="p.id === activeProfile?.id" class="font-mono text-ak-400 ml-2">●</span>
+          </button>
+          <div v-if="!settings.settings.profiles.length" class="px-4 py-3 text-gray-600 font-mono text-xs">NO_PROVIDERS_CONFIGURED</div>
+          <router-link
+            to="/settings"
+            class="block px-4 py-3 border-t border-gray-800 font-sans font-bold text-[10px] tracking-widest uppercase text-gray-400 hover:text-ak-400 transition-colors"
+            @click="providerOpen = false"
+          >
+            + CONFIGURE_PROVIDERS
+          </router-link>
+        </div>
+      </div>
+
+      <!-- Core Composer -->
       <Composer />
-      <AssetSlots />
-      <ParamPanel />
+
+      <!-- Mode Toggles and Params are grouped here -->
+      <div class="mt-8 space-y-6">
+
+        <div class="flex flex-col gap-2">
+           <div class="font-sans font-bold text-gray-500 tracking-widest text-xs uppercase">RENDER_MODE</div>
+           <div class="flex bg-ak-gray p-1 w-full gap-1">
+             <button
+               class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-all"
+               :class="activeMode === 'REF_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
+               @click="composer.setActiveMode('REF_MODE')"
+             >
+               REFERENCE
+             </button>
+             <button
+               class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-all"
+               :class="activeMode === 'KEYFRAME_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
+               @click="composer.setActiveMode('KEYFRAME_MODE')"
+             >
+               KEYFRAME
+             </button>
+           </div>
+        </div>
+
+        <ParamPanel />
+      </div>
     </div>
 
-    <!-- Monitor Axis (Right) -->
-    <div class="flex-1 h-full relative bg-tactical-900 overflow-hidden flex flex-col">
-      <!-- 临时放 TaskList 占位 -->
-      <div class="p-6 h-full overflow-y-auto">
-        <TaskList />
+    <!-- Right Side: Preview & Assets -->
+    <div class="flex-1 h-full relative flex flex-col items-center justify-center p-8 z-0 overflow-y-auto">
+
+      <div class="relative z-10 w-full max-w-4xl flex flex-col gap-6 items-center">
+        <!-- Asset Slots dynamically placed around preview based on mode -->
+        <AssetSlots v-if="activeMode === 'REF_MODE'" :mode="activeMode" class="w-full max-w-2xl" />
+
+        <!-- First Frame for Keyframe Mode -->
+        <AssetSlots v-if="activeMode === 'KEYFRAME_MODE'" :mode="'KEYFRAME_MODE'" class="w-full max-w-2xl" />
+
+        <!-- Center Preview Box -->
+        <div class="w-full aspect-video border border-gray-600 relative group overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+          <!-- Decorative corners -->
+          <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-ak-400 z-20"></div>
+          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-ak-400 z-20"></div>
+
+          <!-- Idle State Summary Content -->
+          <div v-if="!isRunning && !isCompleted" class="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 p-8" :class="{ 'opacity-0 scale-110 pointer-events-none blur-sm': isRunning }">
+            <div class="w-16 h-1 bg-ak-400 mb-6"></div>
+            <h2 class="font-sans font-black text-4xl text-white tracking-widest uppercase mb-4 text-center drop-shadow-md">
+              WAITING_FOR_DATA
+            </h2>
+            <div class="flex gap-4 font-mono text-sm text-gray-400">
+              <span class="bg-ak-gray px-2 py-1">MODE: {{ activeMode }}</span>
+              <span class="bg-ak-gray px-2 py-1">RATIO: {{ composer.params.ratio }}</span>
+              <span class="bg-ak-gray px-2 py-1">RES: {{ composer.params.resolution }}</span>
+              <span class="bg-ak-gray px-2 py-1">DURATION: {{ composer.params.duration }}s</span>
+            </div>
+
+            <!-- 按需展示：仅当用户配置了对应项才出现 -->
+            <div v-if="hasOptionalParams" class="mt-3 flex flex-wrap gap-4 font-mono text-sm text-gray-400 justify-center">
+              <span v-if="composer.params.generateAudio" class="bg-ak-gray px-2 py-1">AUDIO_GEN</span>
+              <span v-if="composer.params.returnLastFrame" class="bg-ak-gray px-2 py-1">LAST_FRAME</span>
+              <span v-if="composer.params.watermark" class="bg-ak-gray px-2 py-1">WATERMARK</span>
+              <span v-if="composer.params.seed != null" class="bg-ak-gray px-2 py-1">RAND_SEED: {{ composer.params.seed }}</span>
+            </div>
+
+            <div class="absolute bottom-6 left-6 font-sans text-xs text-gray-600 tracking-widest">
+              [[ SYSTEM STANDBY ]]
+            </div>
+          </div>
+
+          <!-- Running State -->
+          <div v-if="isRunning" class="absolute inset-0 flex flex-col items-center justify-center animate-[fade-in_1s_ease-out]">
+            <div class="relative w-32 h-32 flex items-center justify-center mb-6">
+              <!-- Animated rings -->
+              <div class="absolute inset-0 border-2 border-ak-400 rounded-full animate-ping opacity-20"></div>
+              <div class="absolute inset-4 border border-ak-400 rounded-full border-t-transparent animate-spin"></div>
+              <div class="font-sans font-black text-ak-400 text-xl tracking-widest">PROG</div>
+            </div>
+            <div class="font-mono text-white tracking-widest text-sm">SYNCHRONIZING CORE...</div>
+          </div>
+
+          <!-- Video Player State (Placeholder) -->
+          <div v-if="isCompleted" class="absolute inset-0 bg-black">
+            <div class="absolute top-4 left-4 font-mono text-xs text-ak-400 bg-ak-dark/80 px-2 py-1 z-10">RENDER_COMPLETE</div>
+            <!-- Video element would go here, bound to task output -->
+            <div class="w-full h-full flex items-center justify-center text-gray-600">
+              <span class="font-sans text-2xl tracking-widest">[ VIDEO PLAYER ]</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Composer from '@/components/Composer/Composer.vue'
 import AssetSlots from '@/components/Composer/AssetSlots.vue'
 import ParamPanel from '@/components/Composer/ParamPanel.vue'
-import TaskList from '@/components/Gallery/TaskList.vue'
+import { useComposerStore } from '@/stores/composer'
+import { storeToRefs } from 'pinia'
+import { useTasksStore } from '@/stores/tasks'
+import { useSettingsStore } from '@/stores/settings'
+import { MODEL_META } from '@/config/models'
+import type { SeedanceModel } from '@/types'
+
+const composer = useComposerStore()
+const tasksStore = useTasksStore()
+const settings = useSettingsStore()
+
+// 渲染模式持久化在 composer store，跨页面保留；用 storeToRefs 保持响应式
+const { activeMode } = storeToRefs(composer)
+
+// 假设状态，你可以根据实际 tasksStore 修改
+const isRunning = computed(() => tasksStore.tasks.some(t => t.status === 'running'))
+// 为了演示，假设计划完成后会有最近一条成功任务，并且可以在此播放
+const isCompleted = computed(() => false) // 结合实际逻辑实现播放器，现在保持为 false 测试排版
+
+// 当前渠道商与切换
+const activeProfile = computed(() => settings.activeProfile)
+// 当前配置的模型名称：优先 profile.model 覆盖，否则取 composer 选中的模型
+const modelLabel = computed(() => {
+  const override = activeProfile.value?.model
+  if (override && override in MODEL_META) return MODEL_META[override as SeedanceModel].label
+  if (override) return override
+  return MODEL_META[composer.params.model]?.label ?? composer.params.model
+})
+const providerOpen = ref(false)
+
+// 是否存在按需展示的可选配置（开关开启或 seed 已设）
+const hasOptionalParams = computed(() =>
+  composer.params.generateAudio ||
+  composer.params.returnLastFrame ||
+  composer.params.watermark ||
+  composer.params.seed != null,
+)
+
+function selectProvider(id: string) {
+  settings.setActiveProfile(id)
+  providerOpen.value = false
+}
+
+// 点击下拉外部关闭
+function onDocClick(e: MouseEvent) {
+  if (!providerOpen.value) return
+  const target = e.target as HTMLElement | null
+  if (target && !target.closest('.provider-dropdown-root')) {
+    providerOpen.value = false
+  }
+}
+onMounted(() => document.addEventListener('click', onDocClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 </script>
+
+<style scoped>
+@keyframes fade-in {
+  from { opacity: 0; filter: blur(10px); }
+  to { opacity: 1; filter: blur(0); }
+}
+</style>

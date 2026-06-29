@@ -3,35 +3,30 @@
 @tailwind utilities;
 
 @layer utilities {
-  /* 基础倒角 (左上和右下切角，适合输入框和槽位) */
+  /* 基础倒角 */
   .clip-chamfer {
     clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
   }
 
-  /* 强倒角 (仅右下大面积切角，适合主卡片和巨型按钮) */
+  /* 强倒角 */
   .clip-chamfer-lg {
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%);
   }
 
-  /* 反向倒角 (右上和左下切角，适合修饰性色块) */
+  /* 反向倒角 */
   .clip-chamfer-reverse {
     clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   }
 
-  /* 爱莉希雅专属：无瑕粉色霓虹外发光 (交互态) */
-  .neon-glow-pink {
-    box-shadow: 0 0 12px rgba(255, 135, 178, 0.5), 0 0 24px rgba(255, 80, 144, 0.3);
+  /* 明日方舟：青色霓虹发光 (交互态) */
+  .neon-glow-cyan {
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.4), 0 0 24px rgba(0, 184, 212, 0.2);
   }
 
   /* 聚焦时极强的水晶发光 */
-  .neon-glow-pink-focus:focus-within {
-    box-shadow: 0 0 15px rgba(255, 135, 178, 0.6), inset 0 0 15px rgba(255, 135, 178, 0.25);
-    border-color: #FF87B2;
-  }
-
-  /* 工业水晶面板质感 (带有樱花暗纹) */
-  .glass-elysia {
-    @apply bg-tactical-800/80 backdrop-blur-md border border-tactical-border bg-sakura-pattern;
+  .neon-glow-cyan-focus:focus-within {
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.5), inset 0 0 15px rgba(0, 229, 255, 0.2);
+    border-color: #00E5FF;
   }
 }
 
@@ -44,23 +39,37 @@ body,
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
-  @apply bg-tactical-900 text-gray-300 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-tactical-800 via-tactical-900 to-black;
+  @apply text-gray-300;
+  background-color: #0a0a0a;
+  background-image: radial-gradient(ellipse at center, rgba(30, 30, 30, 0.8) 0%, rgba(10, 10, 10, 1) 100%);
+    
 }
 
-/* Fly-through router transition */
+/* 隐藏滚动条 */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Fly-through router transition (冲向镜头) */
 .fly-through-enter-active,
 .fly-through-leave-active {
-  transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: all 0.6s cubic-bezier(0.25, 1, 0.2, 1);
   transform-style: preserve-3d;
-  perspective: 1000px;
+  perspective: 1200px;
 }
 
 .fly-through-enter-from {
   opacity: 0;
-  transform: translateZ(-200px) scale(0.9);
+  /* 从屏幕深处出现 */
+  transform: translateZ(-300px) scale(0.85);
 }
 
 .fly-through-leave-to {
   opacity: 0;
-  transform: translateZ(200px) scale(1.1);
+  /* 向着镜头冲来并穿透 */
+  transform: translateZ(400px) scale(1.3);
 }

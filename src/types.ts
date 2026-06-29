@@ -13,7 +13,7 @@ export type AssetKind = 'image' | 'video' | 'audio'
 
 // 比例
 export type VideoRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | 'adaptive'
-export type VideoResolution = '480p' | '720p' | '1080p'
+export type VideoResolution = '480p' | '720p' | '1080p' | '4K'
 
 // 已入库的素材（blob 数据另存 db.blobs，这里只持引用）
 export interface StoredAsset {

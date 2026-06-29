@@ -10,6 +10,7 @@ interface ComposerDraft {
   prompt: string
   params: VideoParams
   assetIds: string[]
+  activeMode?: 'REF_MODE' | 'KEYFRAME_MODE'
 }
 
 function loadDraft(): ComposerDraft {
@@ -17,6 +18,7 @@ function loadDraft(): ComposerDraft {
     prompt: '',
     params: defaultParams(useSettingsStore().settings.defaultModel),
     assetIds: [],
+    activeMode: 'REF_MODE',
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -26,6 +28,7 @@ function loadDraft(): ComposerDraft {
       prompt: parsed.prompt ?? '',
       params: { ...def.params, ...(parsed.params ?? {}) },
       assetIds: Array.isArray(parsed.assetIds) ? parsed.assetIds : [],
+      activeMode: parsed.activeMode === 'KEYFRAME_MODE' ? 'KEYFRAME_MODE' : 'REF_MODE',
     }
   } catch {
     return def
@@ -38,20 +41,23 @@ export const useComposerStore = defineStore('composer', () => {
   const assetIds = ref<string[]>([])
   // 已入库的素材对象缓存（id → asset），提交时用
   const assets = ref<StoredAsset[]>([])
+  // 当前渲染模式（参考图 / 首尾帧），跨页面保留
+  const activeMode = ref<'REF_MODE' | 'KEYFRAME_MODE'>('REF_MODE')
 
   // 恢复
   const draft = loadDraft()
   prompt.value = draft.prompt
   params.value = draft.params
   assetIds.value = draft.assetIds
+  activeMode.value = draft.activeMode ?? 'REF_MODE'
 
   watch(
-    [prompt, params, assetIds],
+    [prompt, params, assetIds, activeMode],
     () => {
       try {
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ prompt: prompt.value, params: params.value, assetIds: assetIds.value }),
+          JSON.stringify({ prompt: prompt.value, params: params.value, assetIds: assetIds.value, activeMode: activeMode.value }),
         )
       } catch (err) {
         console.warn('草稿持久化失败', err)
@@ -64,6 +70,10 @@ export const useComposerStore = defineStore('composer', () => {
     prompt.value = p
   }
 
+  function setActiveMode(mode: 'REF_MODE' | 'KEYFRAME_MODE') {
+    activeMode.value = mode
+  }
+
   function patchParams(patch: Partial<VideoParams>) {
     params.value = { ...params.value, ...patch }
   }
@@ -71,7 +81,7 @@ export const useComposerStore = defineStore('composer', () => {
   // 切换模型时按模型能力钳制分辨率
   function setModel(model: VideoParams['model']) {
     const next = { ...params.value, model }
-    const allowed = model.endsWith('fast') ? ['480p', '720p'] : ['480p', '720p', '1080p']
+    const allowed = model.endsWith('fast') ? ['480p', '720p', '4K'] : ['480p', '720p', '1080p', '4K']
     if (!allowed.includes(next.resolution)) next.resolution = '720p'
     params.value = next
   }
@@ -112,7 +122,9 @@ export const useComposerStore = defineStore('composer', () => {
     params,
     assetIds,
     assets,
+    activeMode,
     setPrompt,
+    setActiveMode,
     patchParams,
     setModel,
     addAsset,

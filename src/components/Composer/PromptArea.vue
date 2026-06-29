@@ -27,28 +27,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative w-full clip-chamfer glass-elysia p-1 neon-glow-pink-focus transition-all duration-300 group">
-    <!-- 左上角标识码 -->
-    <div class="absolute top-0 left-0 bg-elysia-400 text-tactical-900 font-mono text-[10px] px-2 py-0.5 clip-chamfer-reverse font-bold flex items-center gap-1 z-10">
-      <svg class="w-2 h-2" viewBox="0 0 10 10" fill="currentColor"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
-      ELY_DIRECTIVE
+  <div class="relative w-full border-b-2 border-ak-darker focus-within:border-ak-400 transition-colors duration-300 group bg-ak-dark/50">
+    <!-- Top-left tag -->
+    <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 flex items-center gap-1 z-10 tracking-widest">
+      <div class="w-1.5 h-1.5 bg-ak-darker"></div>
+      PROMPT_INPUT
     </div>
 
     <textarea
       ref="textareaRef"
       :value="composer.prompt"
       @input="onInput"
-      placeholder=">_ 嗨♪ 把你的奇思妙想告诉我吧..."
+      placeholder="DESCRIBE_SCENE..."
       rows="3"
-      class="w-full bg-gray-100 dark:bg-tactical-800 mt-5 p-3 text-gray-800 dark:text-elysia-50 font-mono outline-none resize-none placeholder-elysia-400/40 clip-chamfer"
+      class="w-full bg-transparent mt-6 p-4 text-white font-sans text-sm outline-none resize-none placeholder-gray-600 tracking-wider"
       style="min-height: 4.5rem; overflow-y: hidden;"
     />
 
     <div
-      class="absolute bottom-2 right-3 font-mono text-xs transition-colors"
-      :class="overSuggest ? 'text-red-400 animate-pulse' : 'text-elysia-400 group-hover:text-elysia-300'"
+      class="absolute bottom-2 right-2 font-mono text-[10px] transition-colors bg-ak-darker/80 px-1 py-0.5"
+      :class="overSuggest ? 'text-red-500 animate-pulse' : 'text-gray-500 group-focus-within:text-ak-400'"
     >
-      [ CHAR: {{ count }} / {{ PROMPT_MAX }} ]
+      [ {{ count }} / {{ PROMPT_MAX }} ]
     </div>
   </div>
 </template>

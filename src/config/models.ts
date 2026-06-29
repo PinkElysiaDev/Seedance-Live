@@ -69,8 +69,8 @@ export const SEEDANCE_REFERENCE_LIMITS = {
 
 export function resolutionsForModel(model: SeedanceModel): VideoResolution[] {
   const meta = MODEL_META[model]
-  if (meta.maxResolution === '1080p') return ['480p', '720p', '1080p']
-  return ['480p', '720p']
+  if (meta.maxResolution === '1080p') return ['480p', '720p', '1080p', '4K']
+  return ['480p', '720p', '4K']
 }
 
 export function ratiosForModel(model: SeedanceModel): VideoRatio[] {

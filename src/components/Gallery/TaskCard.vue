@@ -42,12 +42,12 @@ onMounted(loadMedia)
 
 const statusText = computed(() => {
   switch (props.task.status) {
-    case 'queued': return '排队中'
-    case 'running': return props.task.recoverable ? '重连中…' : '生成中…'
-    case 'succeeded': return '完成'
-    case 'failed': return '失败'
-    case 'cancelled': return '已取消'
-    case 'expired': return '已过期'
+    case 'queued': return 'QUEUED'
+    case 'running': return props.task.recoverable ? 'RECONNECTING' : 'RENDERING'
+    case 'succeeded': return 'COMPLETED'
+    case 'failed': return 'FAILED'
+    case 'cancelled': return 'CANCELLED'
+    case 'expired': return 'EXPIRED'
   }
 })
 
@@ -65,7 +65,7 @@ const remoteHint = computed(() => {
   if (props.task.progress != null) {
     parts.push(`${props.task.progress}%`)
   } else {
-    parts.push('远端未返回进度')
+    parts.push('SYNCING')
   }
   parts.push(`${elapsedSec.value}s`)
   return parts.join(' · ')
@@ -73,18 +73,29 @@ const remoteHint = computed(() => {
 
 const statusColor = computed(() => {
   switch (props.task.status) {
-    case 'running': return 'text-violet-600'
-    case 'succeeded': return 'text-green-600'
-    case 'failed': case 'cancelled': case 'expired': return 'text-red-500'
-    default: return 'text-gray-500'
+    case 'running': return 'bg-ak-400 text-ak-darker'
+    case 'succeeded': return 'bg-white text-ak-darker'
+    case 'failed': case 'cancelled': case 'expired': return 'bg-red-500 text-white'
+    default: return 'bg-gray-600 text-white'
   }
 })
 
 const modelLabel = computed(() => MODEL_META[props.task.params.model]?.label ?? props.task.params.model)
 
+// 基于请求比例计算 paddingTop，实现基于宽度的自适应高度
+const aspectRatioPadding = computed(() => {
+  const ratio = props.task.params.ratio || '16:9'
+  if (ratio === '16:9') return '56.25%'
+  if (ratio === '9:16') return '177.77%'
+  if (ratio === '1:1') return '100%'
+  if (ratio === '4:3') return '75%'
+  if (ratio === '3:4') return '133.33%'
+  if (ratio === '21:9') return '42.85%'
+  return '56.25%' // default fallback
+})
+
 async function download() {
   if (videoUrl.value) {
-    // 本地 blob URL 直接下载
     const a = document.createElement('a')
     a.href = videoUrl.value
     a.download = `seedance-${props.task.id.slice(0, 8)}.mp4`
@@ -113,7 +124,6 @@ async function continueFrame() {
   else toast.show('已创建续帧任务', 'success')
 }
 
-// 复用配置：把该任务参数填回 composer
 function reuseConfig() {
   composer.setPrompt(props.task.prompt)
   composer.patchParams({ ...props.task.params })
@@ -122,65 +132,69 @@ function reuseConfig() {
 </script>
 
 <template>
-  <div class="flex flex-col border border-tactical-border glass-elysia clip-chamfer p-1 relative overflow-hidden group hover:border-elysia-400 transition-colors">
-    <!-- 状态指示灯条 -->
+  <div class="flex flex-col w-full min-w-0 bg-ak-dark/50 border border-gray-800 relative group hover:border-ak-400 transition-colors shadow-lg">
+
+    <!-- Thumbnail Area (自适应宽高比) -->
     <div
-      class="absolute left-0 top-0 bottom-0 w-1 transition-all"
-      :class="{
-        'bg-elysia-400 animate-pulse neon-glow-pink': isRunning,
-        'bg-teal-400 shadow-[0_0_8px_#2dd4bf]': task.status === 'succeeded',
-        'bg-red-500 shadow-[0_0_8px_#ef4444]': task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired',
-        'bg-gray-500': task.status === 'queued'
-      }"
-    ></div>
-
-    <div class="h-40 bg-gray-100 dark:bg-tactical-900 m-1 relative flex items-center justify-center border border-gray-300 dark:border-tactical-700 cursor-pointer overflow-hidden group-hover:border-elysia-400/50" @click="emit('open')">
-      <video
-        v-if="videoUrl && task.status === 'succeeded'"
-        :src="videoUrl"
-        controls
-        class="h-full w-full object-contain"
-        @click.stop="emit('open')"
-      />
-      <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-      <div v-else class="flex flex-col h-full items-center justify-center text-elysia-500/50 dark:text-elysia-400/50">
-        <span class="font-mono text-xs">{{ isRunning ? 'PROCESSING_CRYSTAL...' : 'NO_VISUAL_DATA' }}</span>
+      class="w-full relative cursor-pointer overflow-hidden bg-ak-darker"
+      :style="{ paddingBottom: aspectRatioPadding }"
+      @click="emit('open')"
+    >
+      <!-- Status Badge Top Left -->
+      <div class="absolute top-0 left-0 z-20 font-sans font-bold text-[10px] px-2 py-1 uppercase tracking-widest" :class="statusColor">
+        {{ statusText }}
       </div>
 
-      <div v-if="isRunning" class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-100 dark:from-tactical-900 to-transparent p-2 border-t border-elysia-400/30">
-        <div class="flex items-center justify-between font-mono text-[10px] text-gray-800 dark:text-elysia-50">
-          <span>> {{ statusText }}</span>
-          <span class="text-right opacity-80">{{ remoteHint }}</span>
-        </div>
-        <div v-if="estimatedProgress != null" class="mt-1 flex gap-0.5">
-          <div
-            v-for="i in 20" :key="i"
-            class="h-1 flex-1 bg-elysia-400/20"
-            :class="{ 'bg-elysia-400 neon-glow-pink': i * 5 <= estimatedProgress }"
-          ></div>
+      <!-- 绝对定位撑满 padding 创造出来的盒子 -->
+      <div class="absolute inset-0 flex items-center justify-center">
+        <video
+          v-if="videoUrl && task.status === 'succeeded'"
+          :src="videoUrl"
+          controls
+          class="h-full w-full object-cover relative z-10"
+          @click.stop="emit('open')"
+        />
+        <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity group-hover:scale-105 duration-700 relative z-10" />
+        <div v-else class="flex flex-col h-full items-center justify-center text-gray-600 font-sans tracking-widest relative z-10">
+          <span class="text-xs uppercase">{{ isRunning ? 'PROCESSING...' : 'NO_VISUAL_DATA' }}</span>
         </div>
       </div>
+
+      <!-- Running Overlay -->
+      <div v-if="isRunning" class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ak-darker to-transparent p-3 border-t border-ak-400 z-20">
+        <div class="flex items-center justify-between font-sans text-[10px] text-ak-400 tracking-widest uppercase font-bold">
+          <span>{{ statusText }}</span>
+          <span class="text-right">{{ remoteHint }}</span>
+        </div>
+        <div v-if="estimatedProgress != null" class="mt-2 w-full bg-gray-800 h-1 relative overflow-hidden">
+          <div class="absolute top-0 left-0 h-full bg-ak-400 transition-all duration-300" :style="{ width: `${estimatedProgress}%` }"></div>
+        </div>
+      </div>
+
+      <!-- Hover Overlay -->
+      <div v-if="!isRunning" class="absolute inset-0 bg-ak-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none"></div>
     </div>
 
-    <div class="p-2 flex flex-col gap-1 pl-3">
+    <!-- Details Area -->
+    <div class="p-4 flex flex-col gap-2 relative">
       <div class="flex justify-between items-center mb-1">
-        <div class="font-mono text-[10px] truncate uppercase font-bold" :class="statusColor">SYS_STATUS: {{ statusText }} //</div>
-        <span class="font-mono text-[10px] text-gray-600 dark:text-gray-500 border border-gray-300 dark:border-gray-700 px-1 bg-gray-100 dark:bg-tactical-900">{{ modelLabel }} · {{ task.params.ratio }} · {{ task.params.duration }}s</span>
+        <span class="font-sans font-bold text-[10px] text-gray-500 bg-ak-gray px-1 tracking-widest uppercase border border-gray-700">{{ modelLabel }} · {{ task.params.ratio }}</span>
       </div>
-      <div class="font-sans text-sm text-gray-800 dark:text-elysia-50 line-clamp-2 leading-relaxed" :title="task.prompt">{{ task.prompt || 'NO_PROMPT_DATA' }}</div>
+      <div class="font-sans text-sm text-gray-300 line-clamp-2 leading-relaxed tracking-wide" :title="task.prompt">{{ task.prompt || 'NO_PROMPT_DATA' }}</div>
 
-      <div v-if="task.error" class="mt-1 font-mono text-[10px] text-red-600 dark:text-red-400 border border-red-500/30 bg-red-100 dark:bg-red-900/20 px-2 py-1 line-clamp-2 clip-chamfer">
+      <div v-if="task.error" class="mt-2 font-mono text-[10px] text-red-500 bg-red-900/20 px-2 py-1 line-clamp-2 border border-red-500/30">
         ERR: {{ task.error }}
-        <span v-if="task.errorDetails?.quota_refunded" class="text-elysia-600 dark:text-elysia-300 ml-1"> [QUOTA_REFUNDED]</span>
+        <span v-if="task.errorDetails?.quota_refunded" class="text-gray-400 ml-1"> [QUOTA_REFUNDED]</span>
       </div>
 
-      <div class="mt-2 flex flex-wrap gap-1">
-        <button v-if="isRunning" class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-red-500 hover:text-red-500 transition-colors clip-chamfer" @click="cancel">ABORT</button>
-        <button v-if="task.status === 'succeeded'" class="font-mono text-[10px] border border-elysia-400/50 bg-elysia-50 dark:bg-elysia-400/10 text-elysia-600 dark:text-elysia-300 px-2 py-1 hover:border-elysia-500 hover:bg-elysia-100 dark:hover:border-elysia-400 dark:hover:bg-elysia-400 dark:hover:text-tactical-900 transition-colors clip-chamfer" @click="download">DOWNLOAD</button>
-        <button v-if="task.status === 'succeeded' && task.lastFrameImageId" class="font-mono text-[10px] border border-teal-500/50 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 px-2 py-1 hover:border-teal-600 hover:bg-teal-100 dark:hover:border-teal-400 dark:hover:bg-teal-400 dark:hover:text-tactical-900 transition-colors clip-chamfer" @click="continueFrame">CHAIN_FRAME</button>
-        <button class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-elysia-500 hover:text-elysia-600 dark:hover:border-elysia-400 dark:hover:text-elysia-300 transition-colors clip-chamfer" @click="reuseConfig">CLONE_CFG</button>
-        <button v-if="task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired'" class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-elysia-500 hover:text-elysia-600 dark:hover:border-elysia-400 dark:hover:text-elysia-300 transition-colors clip-chamfer" @click="retry">RETRY</button>
-        <button class="font-mono text-[10px] border border-gray-400 dark:border-tactical-500 bg-gray-100 dark:bg-tactical-800 text-gray-600 dark:text-gray-400 px-2 py-1 hover:border-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:border-red-500 dark:hover:text-red-500 dark:hover:bg-red-900/20 transition-colors clip-chamfer ml-auto" @click="remove">DELETE</button>
+      <!-- Actions -->
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button v-if="isRunning" class="font-sans font-bold text-[10px] tracking-widest uppercase border border-gray-600 bg-ak-gray text-gray-400 px-3 py-1.5 hover:border-red-500 hover:text-red-500 transition-colors" @click="cancel">ABORT</button>
+        <button v-if="task.status === 'succeeded'" class="font-sans font-bold text-[10px] tracking-widest uppercase bg-white text-ak-darker px-3 py-1.5 hover:bg-gray-300 transition-colors" @click="download">SAVE</button>
+        <button v-if="task.status === 'succeeded' && task.lastFrameImageId" class="font-sans font-bold text-[10px] tracking-widest uppercase border border-ak-400 bg-ak-400/10 text-ak-400 px-3 py-1.5 hover:bg-ak-400 hover:text-ak-darker transition-colors" @click="continueFrame">CHAIN</button>
+        <button class="font-sans font-bold text-[10px] tracking-widest uppercase border border-gray-600 bg-ak-gray text-gray-400 px-3 py-1.5 hover:border-ak-400 hover:text-ak-400 transition-colors" @click="reuseConfig">CLONE</button>
+        <button v-if="task.status === 'failed' || task.status === 'cancelled' || task.status === 'expired'" class="font-sans font-bold text-[10px] tracking-widest uppercase border border-gray-600 bg-ak-gray text-gray-400 px-3 py-1.5 hover:border-ak-400 hover:text-ak-400 transition-colors" @click="retry">RETRY</button>
+        <button class="font-sans font-bold text-[10px] tracking-widest uppercase text-red-500 px-2 py-1.5 hover:bg-red-900/20 transition-colors ml-auto" @click="remove">DEL</button>
       </div>
     </div>
   </div>

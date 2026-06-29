@@ -56,7 +56,7 @@ export function validateTask(params: VideoParams, prompt: string, assets: Stored
   }
 
   // 模型分辨率限制
-  const allowed = meta.maxResolution === '1080p' ? ['480p', '720p', '1080p'] : ['480p', '720p']
+  const allowed = meta.maxResolution === '1080p' ? ['480p', '720p', '1080p', '4K'] : ['480p', '720p', '4K']
   if (!allowed.includes(params.resolution)) errors.push(`${meta.label} 不支持 ${params.resolution}`)
 
   // 时长

@@ -1,21 +1,22 @@
 <template>
-  <div class="h-full relative flex flex-col bg-tactical-900 overflow-hidden">
+  <div class="h-full relative flex flex-col bg-ak-darker overflow-hidden">
     <!-- Hacker console background -->
-    <div class="absolute inset-0 bg-sakura-pattern opacity-10 pointer-events-none"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-tactical-900/50 to-tactical-900 pointer-events-none z-0"></div>
-    
-    <div class="relative z-10 flex flex-col h-full p-4 md:p-6 gap-4">
-      <div class="flex items-end justify-between border-b-2 border-elysia-400/30 pb-2">
-        <h1 class="text-3xl md:text-4xl font-sans italic font-black text-elysia-400 drop-shadow-[0_0_12px_rgba(255,135,178,0.6)] uppercase tracking-wider flex items-center gap-3">
-          <div class="h-8 w-4 bg-elysia-500 clip-chamfer-reverse shadow-[0_0_10px_#FF5090] animate-pulse"></div>
-          TERMINAL_LOGS
+    <div class="absolute inset-0 bg-[url('/images/0FFFD6CE6535DD94DDA65146AFFD4F1E.png')] bg-cover bg-center opacity-[0.03] pointer-events-none mix-blend-screen"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-ak-darker/80 to-ak-darker pointer-events-none z-0"></div>
+
+    <div class="relative z-10 flex flex-col h-full p-8 gap-6">
+      <div class="flex items-end justify-between border-b border-gray-800 pb-4">
+        <h1 class="text-3xl md:text-5xl font-sans font-black text-white uppercase tracking-widest flex items-center gap-4">
+          <span class="text-ak-400 font-light">SYS</span>TERMINAL
         </h1>
-        <div class="font-mono text-xs text-elysia-400/60 hidden md:block">
-          [SYS.CORE.LOG.STREAM_ACTIVE]
+        <div class="font-sans text-sm tracking-[0.2em] text-gray-500 hidden md:flex items-center gap-2">
+          <div class="w-12 h-px bg-gray-700"></div>
+          [SYS.CORE.LOG.STREAM]
         </div>
       </div>
-      
-      <div class="flex-1 min-h-0">
+
+      <div class="flex-1 min-h-0 border border-gray-800 bg-black/50 backdrop-blur-sm p-1">
+        <!-- Assuming LogPanel internally handles its own styling, we just provide a clean dark wrapper -->
         <LogPanel :show="true" @close="" class="w-full h-full" is-view />
       </div>
     </div>

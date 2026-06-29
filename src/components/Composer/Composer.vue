@@ -14,7 +14,6 @@ const tasks = useTasksStore()
 const toast = useToastStore()
 const settings = useSettingsStore()
 
-// 实时校验错误（仅在有输入时展示，避免空态刷屏）
 const validationErrors = computed(() => {
   if (!composer.prompt.trim() && composer.assets.length === 0) return []
   return validateTask(composer.params, composer.prompt, composer.assets)
@@ -33,7 +32,6 @@ async function submit() {
   }
 }
 
-// 拖拽上传：根据文件类型推断角色
 function inferRole(file: File): AssetRole | null {
   const kind = roleKindFromMime(file.type)
   if (kind === 'image') return 'referenceImage'
@@ -72,31 +70,38 @@ function onDragOver(e: DragEvent) {
 
 <template>
   <div
-    class="relative w-full flex flex-col"
+    class="relative w-full flex flex-col gap-6"
     @drop="onDrop"
     @dragover="onDragOver"
   >
-    <div class="w-full space-y-4 relative z-10 flex flex-col">
-      <PromptArea />
+    <PromptArea />
 
-      <div v-if="validationErrors.length" class="border border-red-500/50 bg-red-900/20 px-3 py-2 text-xs text-red-400 clip-chamfer font-mono w-full">
-        <div class="font-bold mb-1">>> SYSTEM_CONFLICT_DETECTED <<</div>
-        <div v-for="(e, i) in validationErrors" :key="i">ERR: {{ e }}</div>
-      </div>
-
-      <div class="w-full">
-        <button
-          class="w-full relative mt-2 h-14 bg-gradient-to-r from-elysia-600 to-elysia-400 text-white font-sans italic font-black text-xl tracking-widest clip-chamfer-lg hover:from-elysia-500 hover:to-elysia-300 transition-all neon-glow-pink group overflow-hidden disabled:opacity-50 disabled:grayscale"
-          :disabled="validationErrors.length > 0 || tasks.tasks.some((t) => t.status === 'running')"
-          @click="submit"
-        >
-          <!-- 隐约的警告斜条纹 -->
-          <div class="absolute inset-0 bg-caution-dark opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <span class="relative z-10 flex items-center justify-center gap-2 drop-shadow-md">
-            > INITIATE_FLAWLESS_RENDER
-          </span>
-        </button>
-      </div>
+    <div v-if="validationErrors.length" class="border-l-4 border-red-500 bg-red-500/10 px-4 py-3 text-xs text-red-400 font-sans tracking-wider w-full">
+      <div class="font-bold mb-1 uppercase">>> SYSTEM_CONFLICT_DETECTED</div>
+      <div v-for="(e, i) in validationErrors" :key="i">ERR: {{ e }}</div>
     </div>
+
+    <!-- Submit Button stylized like Arknights -->
+    <button
+      class="w-full relative h-16 bg-white text-ak-darker font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-ak-400 transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
+      :disabled="validationErrors.length > 0 || tasks.tasks.some((t) => t.status === 'running')"
+      @click="submit"
+    >
+      <div class="flex items-center gap-4 relative z-10">
+        <!-- Progressing bars animation on hover -->
+        <div class="flex gap-1 group-hover:gap-2 transition-all">
+          <div class="w-1 h-6 bg-ak-darker"></div>
+          <div class="w-2 h-6 bg-ak-darker"></div>
+          <div class="w-4 h-6 bg-ak-darker"></div>
+        </div>
+        <span>INITIATE_RENDER</span>
+      </div>
+      <!-- Right side arrow indicator -->
+      <div class="relative z-10 text-ak-darker font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">
+        -&gt;
+      </div>
+      <!-- Caution background striping -->
+      <div class="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]"></div>
+    </button>
   </div>
 </template>
