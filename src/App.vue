@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useTasksStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { useLogsStore } from '@/stores/logs'
@@ -8,6 +9,16 @@ import GlobalBackground from '@/components/common/GlobalBackground.vue'
 const tasks = useTasksStore()
 const settings = useSettingsStore()
 const logs = useLogsStore()
+const route = useRoute()
+
+// 顶部 Header 的 Logo 区域在所有页面常驻显示，位置不动
+const showHeaderBrand = true
+// 布局用的首页标志：与路由解耦，仅在路由过渡"空档"（旧页已离场、新页未可见）切换。
+// 避免 out-in 过渡期间 isHome 立即翻转导致 main 高度突变、旧页"放大再消失"。
+const layoutIsHome = ref(route.path === '/')
+function syncLayoutToRoute() {
+  layoutIsHome.value = route.path === '/'
+}
 
 onMounted(async () => {
   logs.setVerbose(settings.settings.verboseLogs)
@@ -24,11 +35,14 @@ watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
   <!-- Full-screen background managed in style.css on body -->
   <GlobalBackground />
   <div class="h-full overflow-hidden flex flex-col z-10 relative">
-    <header class="sticky top-0 z-20 w-full pt-8 pb-4">
+    <header
+      class="z-20 w-full pt-8 pb-4"
+      :class="layoutIsHome ? 'absolute top-0 left-0' : 'sticky top-0'"
+    >
       <div class="mx-auto flex max-w-7xl items-center justify-between px-8">
         <!-- Logo Area -->
-        <div class="flex items-center gap-4">
-          <img src="/images/E2EDDC5F82A3F30CBEC89604BC9C5945.png" class="h-10 w-auto object-contain opacity-90" alt="Logo" />
+        <div class="flex items-center gap-4 transition-all duration-300" :class="{ 'opacity-0 pointer-events-none -translate-x-4': !showHeaderBrand, 'opacity-90 translate-x-0': showHeaderBrand }">
+          <img src="/images/E2EDDC5F82A3F30CBEC89604BC9C5945.png" class="h-10 w-auto object-contain" alt="Logo" />
           <div class="flex flex-col">
             <span class="font-sans font-black text-2xl tracking-widest text-white uppercase leading-none">
               SEEDANCE <span class="text-ak-400 font-light">LIVE</span>
@@ -84,7 +98,12 @@ watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
 
     <main class="flex-1 w-full max-w-7xl mx-auto overflow-hidden relative">
       <router-view v-slot="{ Component }">
-        <transition name="fly-through" mode="out-in">
+        <transition
+          name="fly-through"
+          mode="out-in"
+          @after-leave="syncLayoutToRoute"
+          @before-enter="syncLayoutToRoute"
+        >
           <component :is="Component" />
         </transition>
       </router-view>

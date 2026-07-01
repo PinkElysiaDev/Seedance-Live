@@ -48,7 +48,7 @@ function selectInChain(id: string) {
     <!-- Left: Task Grid -->
     <div class="flex-1 flex flex-col gap-6 overflow-y-auto hide-scrollbar pb-12">
       <!-- Search Input Top -->
-      <div class="relative w-full max-w-md">
+      <div class="relative w-[calc(50%-0.75rem)]">
         <input
           v-model="keyword"
           placeholder="SEARCH ARCHIVE..."
@@ -81,18 +81,18 @@ function selectInChain(id: string) {
     </div>
 
     <!-- Right: Filter Column (re-placed here for tighter integration with TaskList) -->
-    <div class="w-48 flex flex-col gap-3 pt-16 relative overflow-hidden">
+    <div class="w-72 flex flex-col gap-3 relative overflow-hidden">
       <!-- 巨大竖排 ARCHIVE 背景装饰 -->
       <div class="pointer-events-none absolute -top-4 -right-8 text-[120px] leading-none font-sans font-black text-white/5 uppercase tracking-tighter select-none rotate-90 origin-top-right">
         ARCHIVE
       </div>
 
       <!-- VIDEO / 视频列表 标题，紧贴“全部记录”之上 -->
-      <div class="relative text-right mb-2 pr-1">
-        <div class="font-sans font-black text-ak-400 text-4xl tracking-tighter uppercase leading-none drop-shadow-[0_0_15px_rgba(0,229,255,0.4)]">
+      <div class="relative text-right mb-8 pr-1 -mt-3.5">
+        <div class="font-sans font-black text-ak-400 text-7xl tracking-tighter uppercase leading-none drop-shadow-[0_0_15px_rgba(0,229,255,0.4)]">
           VIDEO
         </div>
-        <div class="font-sans text-white tracking-[0.3em] text-xs mt-1 opacity-50">
+        <div class="font-sans text-white tracking-[0.45em] text-lg mt-3 opacity-50">
           视频列表
         </div>
       </div>
