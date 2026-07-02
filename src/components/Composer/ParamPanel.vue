@@ -23,6 +23,11 @@ function randomSeed() {
 function clearSeed() {
   composer.patchParams({ seed: undefined })
 }
+function stepSeed(delta: number) {
+  const cur = composer.params.seed ?? 0
+  const next = Math.max(0, cur + delta)
+  composer.patchParams({ seed: next })
+}
 </script>
 
 <template>
@@ -131,11 +136,32 @@ function clearSeed() {
             type="number"
             :value="composer.params.seed ?? ''"
             placeholder="RAND_SEED"
-            class="flex-1 min-w-0 bg-transparent text-white font-mono text-xs py-1 outline-none placeholder-gray-600 transition-colors"
+            class="no-spin flex-1 min-w-0 bg-transparent text-white font-mono text-xs py-1 outline-none placeholder-gray-600 transition-colors"
             @input="composer.patchParams({ seed: ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : undefined })"
           />
-          <button class="text-gray-500 hover:text-ak-400 text-xs px-1 font-mono transition-colors" @click="randomSeed" title="GENERATE RANDOM">🎲</button>
-          <button v-if="composer.params.seed != null" class="text-gray-500 hover:text-red-500 text-xs px-1 font-mono transition-colors" @click="clearSeed" title="CLEAR">✕</button>
+          <!-- 自定义上下步进按钮 -->
+          <div class="flex flex-col flex-shrink-0">
+            <button class="text-gray-500 hover:text-ak-400 transition-colors leading-none px-1" @click="stepSeed(1)" title="INCREMENT" aria-label="increment">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" /></svg>
+            </button>
+            <button class="text-gray-500 hover:text-ak-400 transition-colors leading-none px-1" @click="stepSeed(-1)" title="DECREMENT" aria-label="decrement">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+          </div>
+          <!-- 骰子（随机种子）：明日方舟风格 SVG -->
+          <button class="text-gray-500 hover:text-ak-400 transition-colors px-1 flex items-center" @click="randomSeed" title="GENERATE_RANDOM" aria-label="random">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2" />
+              <circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="8" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="8" cy="16" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="16" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+          <button v-if="composer.params.seed != null" class="text-gray-500 hover:text-red-500 transition-colors px-1 flex items-center" @click="clearSeed" title="CLEAR" aria-label="clear">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
       </div>
 

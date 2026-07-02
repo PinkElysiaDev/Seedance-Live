@@ -19,62 +19,62 @@
 
           <!-- Pillar 1: Provider -->
           <div
-            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/30 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
+            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('provider')"
           >
             <!-- Stylized Image Background -->
-            <div class="absolute inset-0 bg-[url('/images/8D0EE95EEACC026829ACA09CFC2CBDA2.png')] bg-cover bg-center opacity-[0.03] group-hover:opacity-[0.15] transition-[opacity,transform] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100"></div>
+            <div class="absolute inset-0 bg-[url('/images/8D0EE95EEACC026829ACA09CFC2CBDA2.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
             <!-- Cyan accent line -->
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/50 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
             <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
               <div class="font-sans text-[10px] tracking-widest text-ak-400 mb-2 opacity-0 group-hover:opacity-100 transition-[opacity,transform] duration-500 ease-out translate-y-4 group-hover:translate-y-0">01 // CONFIGURE</div>
-              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1">PROVIDER</h2>
+              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1 drop-shadow-md">PROVIDER</h2>
               <p class="text-sm font-sans tracking-wider text-gray-600 group-hover:text-gray-300 transition-colors uppercase">API Key & Endpoint</p>
             </div>
           </div>
 
           <!-- Pillar 2: Proxy -->
           <div
-            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/30 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
+            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('proxy')"
           >
-             <div class="absolute inset-0 bg-[url('/images/751D9D83F676527556FFD8943753D774.png')] bg-cover bg-center opacity-[0.03] group-hover:opacity-[0.15] transition-[opacity,transform] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100"></div>
-             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/50 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+             <div class="absolute inset-0 bg-[url('/images/751D9D83F676527556FFD8943753D774.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
              <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
               <div class="font-sans text-[10px] tracking-widest text-ak-400 mb-2 opacity-0 group-hover:opacity-100 transition-[opacity,transform] duration-500 ease-out translate-y-4 group-hover:translate-y-0">02 // NETWORK</div>
-              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1">PROXY_NET</h2>
+              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1 drop-shadow-md">PROXY_NET</h2>
               <p class="text-sm font-sans tracking-wider text-gray-600 group-hover:text-gray-300 transition-colors uppercase">Network Routing</p>
             </div>
           </div>
 
           <!-- Pillar 3: AI Assist -->
           <div
-            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/30 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
+            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('ai')"
           >
-             <div class="absolute inset-0 bg-[url('/images/6C6896C912242C8931465D5AAE86C055.png')] bg-cover bg-center opacity-[0.03] group-hover:opacity-[0.15] transition-[opacity,transform] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100"></div>
-             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/50 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+             <div class="absolute inset-0 bg-[url('/images/6C6896C912242C8931465D5AAE86C055.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
              <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
               <div class="font-sans text-[10px] tracking-widest text-ak-400 mb-2 opacity-0 group-hover:opacity-100 transition-[opacity,transform] duration-500 ease-out translate-y-4 group-hover:translate-y-0">03 // ENGINE</div>
-              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1">AI_ASSIST</h2>
+              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1 drop-shadow-md">AI_ASSIST</h2>
               <p class="text-sm font-sans tracking-wider text-gray-600 group-hover:text-gray-300 transition-colors uppercase">LLM Parsing Engine</p>
             </div>
           </div>
 
           <!-- Pillar 4: General -->
           <div
-            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/30 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
+            class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('general')"
           >
-             <div class="absolute inset-0 bg-[url('/images/8370D828038E08C64EBE4339BC8B2DCB.png')] bg-cover bg-center opacity-[0.03] group-hover:opacity-[0.15] transition-[opacity,transform] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100"></div>
-             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/50 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+             <div class="absolute inset-0 bg-[url('/images/8370D828038E08C64EBE4339BC8B2DCB.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
              <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
               <div class="font-sans text-[10px] tracking-widest text-ak-400 mb-2 opacity-0 group-hover:opacity-100 transition-[opacity,transform] duration-500 ease-out translate-y-4 group-hover:translate-y-0">04 // CORE</div>
-              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1">GENERAL</h2>
+              <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1 drop-shadow-md">GENERAL</h2>
               <p class="text-sm font-sans tracking-wider text-gray-600 group-hover:text-gray-300 transition-colors uppercase">Behavior & Data</p>
             </div>
           </div>
@@ -99,7 +99,7 @@
           </div>
 
           <!-- Content Area -->
-          <div class="flex-1 overflow-auto p-6 md:p-12 relative z-10">
+          <div class="flex-1 overflow-auto hide-scrollbar p-6 md:p-12 relative z-10">
             <div class="max-w-4xl">
               <!-- Content injected from SettingsDialog -->
               <SettingsFormContent :tab="expandedPillar" @close="closePillar" />

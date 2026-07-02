@@ -63,53 +63,134 @@ function exportJson() {
 
 const levelColor: Record<LogLevel, string> = {
   debug: 'text-gray-500',
-  info: 'text-elysia-300',
+  info: 'text-ak-400',
   warn: 'text-yellow-500',
   error: 'text-red-500',
+}
+
+// 各级别计数
+const LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error']
+const levelCount = computed(() => {
+  const c: Record<LogLevel, number> = { debug: 0, info: 0, warn: 0, error: 0 }
+  for (const e of logs.entries) c[e.level]++
+  return c
+})
+const allCount = computed(() => logs.entries.length)
+
+// 全选
+function selectAllLevels() {
+  levelFilter.value = new Set(['debug', 'info', 'warn', 'error'])
+}
+// chip active：级别在 levelFilter 中
+function isLevelActive(l: LogLevel) {
+  return levelFilter.value.has(l)
+}
+
+// VERBOSE 同步到 settings（与设置页一致）
+import { useSettingsStore } from '@/stores/settings'
+const settings = useSettingsStore()
+function toggleVerbose() {
+  const v = !logs.verbose
+  logs.setVerbose(v)
+  settings.update({ verboseLogs: v })
 }
 </script>
 
 <template>
   <template v-if="props.isView">
-    <div class="h-full flex flex-col space-y-4">
-      <div class="flex flex-wrap items-center gap-3 p-3 bg-tactical-800/80 clip-chamfer border border-tactical-700">
-        <input v-model="keyword" placeholder="SEARCH_LOGS..." class="flex-1 min-w-[200px] bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-sm px-3 py-2 clip-chamfer focus:border-elysia-400 outline-none transition-colors" />
-        <select v-model="catFilter" class="bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-sm px-3 py-2 clip-chamfer focus:border-elysia-400 outline-none transition-colors">
-          <option v-for="c in CATEGORIES" :key="c.v" :value="c.v">{{ c.l.toUpperCase() }}</option>
-        </select>
-        <div class="flex gap-1.5 text-xs font-mono bg-tactical-900 p-1 clip-chamfer border border-tactical-700">
-          <button v-for="l in (['debug','info','warn','error'] as LogLevel[])" :key="l"
-            class="px-4 py-1.5 clip-chamfer transition-all duration-300"
-            :class="levelFilter.has(l) ? 'bg-elysia-400 text-tactical-900 font-bold shadow-[0_0_10px_rgba(255,135,178,0.5)]' : 'text-gray-500 hover:text-elysia-300 hover:bg-tactical-800'"
-            @click="toggleLevel(l)">{{ l.toUpperCase() }}</button>
-        </div>
-        <div class="flex gap-2">
-          <button class="bg-tactical-900 border border-tactical-600 text-gray-400 hover:text-elysia-300 hover:border-elysia-400/50 px-4 py-2 text-xs font-mono clip-chamfer transition-colors shadow-sm" @click="logs.clear">> CLEAR</button>
-          <button class="bg-tactical-900 border border-tactical-600 text-gray-400 hover:text-elysia-300 hover:border-elysia-400/50 px-4 py-2 text-xs font-mono clip-chamfer transition-colors shadow-sm" @click="copyAll">> COPY</button>
-          <button class="bg-tactical-900 border border-tactical-600 text-gray-400 hover:text-elysia-300 hover:border-elysia-400/50 px-4 py-2 text-xs font-mono clip-chamfer transition-colors shadow-sm" @click="exportJson">> EXPORT</button>
+    <div class="h-full flex flex-col gap-4">
+      <!-- 筛选芯片行：ALL / DEBUG / INFO / WARN / ERROR（带计数，可点击筛选） -->
+      <!-- 筛选芯片 + VERBOSE 开关同一行 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          class="group flex items-center gap-2 px-3 py-2 border font-mono text-xs transition-all duration-300 hover:border-ak-400/40"
+          :class="levelFilter.size === 4 ? 'border-gray-700 bg-ak-dark/80 text-ak-400' : 'border-gray-800 bg-ak-dark/40 text-gray-600 hover:text-gray-300'"
+          @click="selectAllLevels"
+        >
+          <span class="w-1.5 h-1.5 rounded-full transition-all"
+            :class="levelFilter.size === 4 ? 'bg-ak-400 shadow-[0_0_10px_rgba(0,229,255,0.9)] animate-[lamp-breathe_2s_ease-in-out_infinite]' : 'bg-gray-600'"></span>
+          <span class="tracking-widest uppercase font-bold">ALL</span>
+          <span class="text-[10px] opacity-70">{{ allCount }}</span>
+        </button>
+        <button
+          v-for="l in LEVELS"
+          :key="l"
+          class="group flex items-center gap-2 px-3 py-2 border font-mono text-xs transition-all duration-300 hover:border-ak-400/40"
+          :class="isLevelActive(l) ? 'border-gray-700 bg-ak-dark/80' : 'border-gray-800 bg-ak-dark/40 hover:bg-ak-gray/30'"
+          @click="l === 'error' && levelFilter.size === 1 && levelFilter.has('error') ? selectAllLevels() : toggleLevel(l)"
+        >
+          <span class="w-1.5 h-1.5 rounded-full transition-all"
+            :class="[
+              isLevelActive(l)
+                ? (l === 'debug' ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)]' : l === 'info' ? 'bg-ak-400 shadow-[0_0_10px_rgba(0,229,255,0.9)]' : l === 'warn' ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.9)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.9)]') + ' animate-[lamp-breathe_2s_ease-in-out_infinite]'
+                : 'bg-gray-600'
+            ]"></span>
+          <span class="tracking-widest uppercase font-bold" :class="isLevelActive(l) ? levelColor[l] : 'text-gray-600'">{{ l.toUpperCase() }}</span>
+          <span class="text-[10px] opacity-70" :class="isLevelActive(l) ? levelColor[l] : 'text-gray-700'">{{ levelCount[l] }}</span>
+        </button>
+
+        <!-- verbose_log 开关（固定宽度，紧跟 ERROR 芯片，设计语言不变） -->
+        <div
+          class="flex items-center justify-between w-[190px] flex-shrink-0 px-3 py-2 border bg-ak-dark/50 hover:border-ak-400/40 transition-all duration-300 cursor-pointer relative"
+          :class="logs.verbose ? 'border-gray-700' : 'border-gray-800'"
+          @click="toggleVerbose"
+        >
+          <span class="font-sans italic font-bold text-[11px] tracking-widest transition-colors" :class="logs.verbose ? 'text-ak-400' : 'text-gray-500'">verbose_log</span>
+          <div class="flex items-center gap-2">
+            <span class="font-sans text-[10px] tracking-wider font-bold transition-colors w-[52px] text-right" :class="logs.verbose ? 'text-ak-400' : 'text-gray-600'">
+              {{ logs.verbose ? 'ACTIVE' : 'INACTIVE' }}
+            </span>
+            <div class="w-1 h-4 bg-ak-400 transition-all duration-300" :class="logs.verbose ? 'opacity-100 shadow-[0_0_8px_#00E5FF] animate-[line-breathe_2s_ease-in-out_infinite]' : 'opacity-20'"></div>
+          </div>
         </div>
       </div>
 
-      <div class="flex-1 overflow-auto bg-tactical-900 border border-elysia-400/30 p-4 clip-chamfer-lg relative group shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
-        <div class="absolute inset-0 bg-sakura-pattern opacity-5 pointer-events-none"></div>
-        <div v-if="!filtered.length" class="h-full flex flex-col items-center justify-center text-sm font-mono text-gray-600">
-           <div class="w-12 h-12 border-2 border-dashed border-tactical-600 rounded-full flex items-center justify-center mb-4 animate-[spin_3s_linear_infinite]">
-             <div class="w-2 h-2 bg-tactical-500 rounded-full"></div>
-           </div>
-           <span class="mb-2 text-elysia-500/80 font-bold tracking-widest">>> NO_LOG_ENTRIES_FOUND <<</span>
-           <span class="text-xs">SYSTEM_IDLE // AWAITING_COMMAND</span>
+      <!-- 搜索/分类/操作工具栏 -->
+      <div class="flex flex-wrap items-center gap-3 p-3 bg-ak-dark/80 border border-gray-800 relative">
+        <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-ak-400/50 pointer-events-none"></div>
+        <input v-model="keyword" placeholder="SEARCH_LOGS..." class="flex-1 min-w-[200px] bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 focus:border-ak-400 outline-none transition-colors placeholder-gray-600" />
+        <select v-model="catFilter" class="bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 focus:border-ak-400 outline-none transition-colors cursor-pointer">
+          <option v-for="c in CATEGORIES" :key="c.v" :value="c.v">{{ c.l.toUpperCase() }}</option>
+        </select>
+        <div class="flex gap-2">
+          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="logs.clear">&gt; CLEAR</button>
+          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="copyAll">&gt; COPY</button>
+          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="exportJson">&gt; EXPORT</button>
         </div>
-        <div v-for="e in filtered" :key="e.id" class="mb-2 bg-tactical-800/60 border-l-2 border-t border-b border-r border-tactical-700 border-l-transparent p-2 text-sm font-mono clip-chamfer hover:border-l-elysia-400 hover:bg-tactical-800 transition-all duration-200 relative z-10 group/item">
+      </div>
+
+      <!-- 日志列表 -->
+      <div class="flex-1 overflow-auto bg-ak-dark/60 border border-gray-800 p-4 relative shadow-[inset_0_0_30px_rgba(0,0,0,0.6)]">
+        <!-- 扫描线装饰 -->
+        <div class="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_3px,rgba(0,229,255,0.015)_3px,rgba(0,229,255,0.015)_4px)]"></div>
+
+        <div v-if="!filtered.length" class="h-full flex flex-col items-center justify-center text-sm font-mono text-gray-600 relative z-10">
+          <div class="relative w-20 h-20 flex items-center justify-center mb-6">
+            <!-- 呼吸光圈（三层错相） -->
+            <div class="absolute inset-0 border border-ak-400/40 rounded-full animate-[terminal-breathe_3s_ease-in-out_infinite]"></div>
+            <div class="absolute inset-0 border border-ak-400/40 rounded-full animate-[terminal-breathe_3s_ease-in-out_infinite_1s]"></div>
+            <div class="absolute inset-0 border border-ak-400/40 rounded-full animate-[terminal-breathe_3s_ease-in-out_infinite_2s]"></div>
+            <!-- 旋转外环（虚线） -->
+            <div class="absolute inset-1 border-t border-ak-400/30 border-r border-transparent border-b border-transparent border-l rounded-full animate-[terminal-ring-spin_6s_linear_infinite]"></div>
+            <!-- 中心核心（脉动） -->
+            <div class="w-2.5 h-2.5 bg-ak-400 rounded-full animate-[terminal-core_2s_ease-in-out_infinite]"></div>
+          </div>
+          <span class="mb-2 text-ak-400/80 font-bold tracking-widest">&gt;&gt; NO_LOG_ENTRIES_FOUND &lt;&lt;</span>
+          <span class="text-xs tracking-widest text-gray-700">SYSTEM_IDLE // AWAITING_COMMAND</span>
+        </div>
+
+        <div v-for="e in filtered" :key="e.id" class="mb-1.5 bg-ak-darker/60 border border-gray-800 border-l-2 p-2 text-sm font-mono hover:bg-ak-darker transition-all duration-200 relative z-10 group/item"
+          :class="expanded.has(e.id) ? 'border-l-ak-400' : 'border-l-transparent hover:border-l-ak-400/60'">
           <div class="flex cursor-pointer items-start gap-3" @click="toggleExpand(e.id)">
-            <span class="text-gray-500 text-xs min-w-[70px] pt-0.5">{{ new Date(e.ts).toLocaleTimeString() }}</span>
-            <span class="bg-tactical-900 border border-tactical-600 px-1.5 py-0.5 text-[10px] text-gray-400 uppercase tracking-wider min-w-[60px] text-center">{{ e.category }}</span>
-            <span :class="levelColor[e.level]" class="font-bold text-xs uppercase min-w-[50px] pt-0.5">{{ e.level }}</span>
-            <span class="flex-1 text-elysia-50/90 leading-relaxed group-hover/item:text-white transition-colors" :class="{'truncate': !expanded.has(e.id)}">{{ e.message }}</span>
-            <span v-if="e.data != null" class="text-elysia-400 text-xs pt-0.5 whitespace-nowrap opacity-50 group-hover/item:opacity-100 transition-opacity">
+            <span class="text-gray-600 text-xs min-w-[70px] pt-0.5">{{ new Date(e.ts).toLocaleTimeString() }}</span>
+            <span class="bg-ak-dark border border-gray-800 px-1.5 py-0.5 text-[10px] text-gray-400 uppercase tracking-wider min-w-[56px] text-center">{{ e.category }}</span>
+            <span :class="levelColor[e.level]" class="font-bold text-xs uppercase min-w-[46px] pt-0.5">{{ e.level }}</span>
+            <span class="flex-1 text-gray-300 leading-relaxed group-hover/item:text-white transition-colors" :class="{'truncate': !expanded.has(e.id)}">{{ e.message }}</span>
+            <span v-if="e.data != null" class="text-ak-400 text-xs pt-0.5 whitespace-nowrap opacity-50 group-hover/item:opacity-100 transition-opacity">
               {{ expanded.has(e.id) ? '[-] COLLAPSE' : '[+] EXPAND' }}
             </span>
           </div>
-          <pre v-if="expanded.has(e.id) && e.data != null" class="mt-3 ml-[150px] max-h-96 overflow-auto bg-tactical-900 border border-tactical-700 p-3 text-xs text-elysia-300 clip-chamfer break-all whitespace-pre-wrap shadow-inner">{{ JSON.stringify(e.data, null, 2) }}</pre>
+          <pre v-if="expanded.has(e.id) && e.data != null" class="mt-3 ml-[150px] max-h-96 overflow-auto bg-ak-dark border border-ak-400/20 p-3 text-xs text-ak-400 break-all whitespace-pre-wrap shadow-[inset_0_0_15px_rgba(0,229,255,0.05)]">{{ JSON.stringify(e.data, null, 2) }}</pre>
         </div>
       </div>
     </div>
@@ -117,36 +198,35 @@ const levelColor: Record<LogLevel, string> = {
   <Modal v-else :show="props.show" title="SYS_LOGS //" width="820px" @close="emit('close')">
     <div class="space-y-3">
       <div class="flex flex-wrap items-center gap-2">
-        <input v-model="keyword" placeholder="SEARCH_LOGS..." class="flex-1 bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-xs px-2 py-1 clip-chamfer focus:border-elysia-400 outline-none" />
-        <select v-model="catFilter" class="bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-xs px-2 py-1 clip-chamfer focus:border-elysia-400 outline-none">
+        <input v-model="keyword" placeholder="SEARCH_LOGS..." class="flex-1 bg-ak-dark border border-gray-800 text-white font-mono text-xs px-2 py-1 clip-chamfer focus:border-ak-400 outline-none" />
+        <select v-model="catFilter" class="bg-ak-dark border border-gray-800 text-white font-mono text-xs px-2 py-1 clip-chamfer focus:border-ak-400 outline-none">
           <option v-for="c in CATEGORIES" :key="c.v" :value="c.v">{{ c.l.toUpperCase() }}</option>
         </select>
         <div class="flex gap-1 text-[10px] font-mono">
           <button v-for="l in (['debug','info','warn','error'] as LogLevel[])" :key="l"
             class="px-3 py-1 clip-chamfer transition-colors"
-            :class="levelFilter.has(l) ? 'bg-elysia-400 text-tactical-900 font-bold shadow-[0_0_8px_rgba(255,135,178,0.4)]' : 'bg-tactical-800 border border-tactical-600 text-gray-500 hover:text-elysia-300 hover:border-elysia-400/50'"
+            :class="levelFilter.has(l) ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'bg-ak-dark border border-gray-800 text-gray-500 hover:text-white hover:border-ak-400/50'"
             @click="toggleLevel(l)">{{ l.toUpperCase() }}</button>
         </div>
-        <button class="bg-tactical-800 border border-tactical-600 text-gray-400 hover:text-elysia-300 hover:border-elysia-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="logs.clear">CLEAR</button>
-        <button class="bg-tactical-800 border border-tactical-600 text-gray-400 hover:text-elysia-300 hover:border-elysia-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="copyAll">COPY</button>
-        <button class="bg-tactical-800 border border-tactical-600 text-gray-400 hover:text-elysia-300 hover:border-elysia-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="exportJson">EXPORT</button>
+        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="logs.clear">CLEAR</button>
+        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="copyAll">COPY</button>
+        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="exportJson">EXPORT</button>
       </div>
 
-      <div class="max-h-[60vh] space-y-1 overflow-auto bg-tactical-900/50 border border-elysia-400/20 p-2 clip-chamfer relative group">
-        <div class="absolute inset-0 bg-sakura-pattern opacity-10 pointer-events-none"></div>
+      <div class="max-h-[60vh] space-y-1 overflow-auto bg-ak-dark/50 border border-ak-400/20 p-2 clip-chamfer relative group">
         <div v-if="!filtered.length" class="py-8 flex flex-col items-center justify-center text-[10px] font-mono text-gray-600">
-           <span class="mb-1 text-elysia-500 font-bold">>> NO_LOG_ENTRIES <<</span>
+           <span class="mb-1 text-ak-400 font-bold">>> NO_LOG_ENTRIES <<</span>
            <span>SYSTEM IDLE</span>
         </div>
-        <div v-for="e in filtered" :key="e.id" class="bg-tactical-800/80 border border-tactical-700 p-1.5 text-xs font-mono clip-chamfer hover:border-elysia-400/40 transition-colors relative z-10">
+        <div v-for="e in filtered" :key="e.id" class="bg-ak-darker/80 border border-gray-800 p-1.5 text-xs font-mono clip-chamfer hover:border-ak-400/40 transition-colors relative z-10">
           <div class="flex cursor-pointer items-center gap-2" @click="toggleExpand(e.id)">
             <span class="text-gray-500 text-[10px]">{{ new Date(e.ts).toLocaleTimeString() }}</span>
-            <span class="bg-tactical-900 border border-tactical-600 px-1 text-[10px] text-gray-400 uppercase">{{ e.category }}</span>
+            <span class="bg-ak-dark border border-gray-800 px-1 text-[10px] text-gray-400 uppercase">{{ e.category }}</span>
             <span :class="levelColor[e.level]" class="font-bold text-[10px] uppercase">{{ e.level }}</span>
-            <span class="flex-1 truncate text-elysia-50">{{ e.message }}</span>
-            <span v-if="e.data != null" class="text-elysia-400 text-[10px]">> VIEW</span>
+            <span class="flex-1 truncate text-gray-300">{{ e.message }}</span>
+            <span v-if="e.data != null" class="text-ak-400 text-[10px]">> VIEW</span>
           </div>
-          <pre v-if="expanded.has(e.id) && e.data != null" class="mt-2 max-h-60 overflow-auto bg-tactical-900 border border-tactical-700 p-2 text-[10px] text-elysia-300 clip-chamfer break-all whitespace-pre-wrap">{{ JSON.stringify(e.data, null, 2) }}</pre>
+          <pre v-if="expanded.has(e.id) && e.data != null" class="mt-2 max-h-60 overflow-auto bg-ak-dark border border-gray-800 p-2 text-[10px] text-ak-400 clip-chamfer break-all whitespace-pre-wrap">{{ JSON.stringify(e.data, null, 2) }}</pre>
         </div>
       </div>
     </div>
