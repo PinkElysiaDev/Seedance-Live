@@ -11,6 +11,23 @@ export function validateTask(params: VideoParams, prompt: string, assets: Stored
   if (!p) errors.push('提示词不能为空')
   if (p.length > PROMPT_MAX) errors.push(`提示词不能超过 ${PROMPT_MAX} 字符`)
 
+  // 素材相关错误（伴随素材状态，可实时展示）
+  errors.push(...validateAssets(assets))
+
+  // 模型分辨率限制
+  const allowed = meta.maxResolution === '1080p' ? ['480p', '720p', '1080p', '4K'] : ['480p', '720p', '4K']
+  if (!allowed.includes(params.resolution)) errors.push(`${meta.label} 不支持 ${params.resolution}`)
+
+  // 时长
+  if (params.duration < 4 || params.duration > 15) errors.push('时长需在 4–15 秒之间')
+
+  return errors
+}
+
+// 仅校验伴随素材状态的错误（数量/体积/时长/互斥/配合），用于实时提示
+export function validateAssets(assets: StoredAsset[]): string[] {
+  const errors: string[] = []
+
   // 分组
   const byRole = (role: AssetRole) => assets.filter((a) => a.role === role)
   const images = byRole('referenceImage')
@@ -54,13 +71,6 @@ export function validateTask(params: VideoParams, prompt: string, assets: Stored
   if (audios.length && !images.length && !videos.length && !firstFrame.length && !lastFrame.length) {
     errors.push('参考音频需配合参考图或参考视频使用')
   }
-
-  // 模型分辨率限制
-  const allowed = meta.maxResolution === '1080p' ? ['480p', '720p', '1080p', '4K'] : ['480p', '720p', '4K']
-  if (!allowed.includes(params.resolution)) errors.push(`${meta.label} 不支持 ${params.resolution}`)
-
-  // 时长
-  if (params.duration < 4 || params.duration > 15) errors.push('时长需在 4–15 秒之间')
 
   return errors
 }

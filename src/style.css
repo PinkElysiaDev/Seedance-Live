@@ -57,7 +57,7 @@ body {
 /* Fly-through router transition (冲向镜头) */
 .fly-through-enter-active,
 .fly-through-leave-active {
-  transition: all 0.6s cubic-bezier(0.25, 1, 0.2, 1);
+  transition: all 0.45s cubic-bezier(0.25, 1, 0.2, 1);
   transform-style: preserve-3d;
   perspective: 1200px;
 }

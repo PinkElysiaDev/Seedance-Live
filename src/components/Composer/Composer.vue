@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useComposerStore } from '@/stores/composer'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
 import PromptArea from './PromptArea.vue'
 import { ingestFile } from '@/lib/asset'
-import { validateTask } from '@/lib/validate'
+import { validateTask, validateAssets } from '@/lib/validate'
 import type { AssetRole } from '@/types'
 
 const composer = useComposerStore()
@@ -14,16 +14,47 @@ const tasks = useTasksStore()
 const toast = useToastStore()
 const settings = useSettingsStore()
 
+// 素材类错误（数量/体积/时长/互斥等）伴随素材状态，实时展示
+const assetErrors = computed(() => validateAssets(composer.assets))
+// 点击生成时才计算的错误（含提示词为空、超长、params 类）
+const submitErrors = ref<string[]>([])
+
+// 合并展示：素材实时错误 + 点击时错误（去重）
 const validationErrors = computed(() => {
-  if (!composer.prompt.trim() && composer.assets.length === 0) return []
-  return validateTask(composer.params, composer.prompt, composer.assets)
+  const merged = [...assetErrors.value]
+  for (const e of submitErrors.value) {
+    if (!merged.includes(e)) merged.push(e)
+  }
+  return merged
 })
 
+// 提示词为空：按钮置灰（仍可点击，点击时给报错）
+const promptEmpty = computed(() => !composer.prompt.trim())
+
+// 用户修改提示词后清除点击时产生的错误，避免残留
+watch(
+  () => composer.prompt,
+  () => { submitErrors.value = [] },
+)
+
 async function submit() {
+  // 无提示词：弹 toast 警告 + 显示错误条，不提交
+  if (promptEmpty.value) {
+    toast.show('请输入提示词', 'error')
+    submitErrors.value = validateTask(composer.params, composer.prompt, composer.assets)
+    return
+  }
   if (!settings.activeProfile?.apiKey.trim()) {
     toast.show('请先在设置中填写 API Key', 'error')
     return
   }
+  // 点击生成时校验全部：有错误则显示且不提交
+  const errors = validateTask(composer.params, composer.prompt, composer.assets)
+  if (errors.length) {
+    submitErrors.value = errors
+    return
+  }
+  submitErrors.value = []
   const res = await tasks.submitTask()
   if (!res.ok) {
     toast.show(res.error ?? '提交失败', 'error')
@@ -82,26 +113,29 @@ function onDragOver(e: DragEvent) {
     </div>
 
     <!-- Submit Button stylized like Arknights -->
-    <button
-      class="w-full relative h-16 bg-white text-ak-darker font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-ak-400 transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
-      :disabled="validationErrors.length > 0 || tasks.tasks.some((t) => t.status === 'running')"
-      @click="submit"
-    >
-      <div class="flex items-center gap-4 relative z-10">
-        <!-- Progressing bars animation on hover -->
-        <div class="flex gap-1 group-hover:gap-2 transition-all">
-          <div class="w-1 h-6 bg-ak-darker"></div>
-          <div class="w-2 h-6 bg-ak-darker"></div>
-          <div class="w-4 h-6 bg-ak-darker"></div>
+    <div class="relative">
+      <button
+        class="w-full relative h-16 bg-white text-ak-darker font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-ak-400 transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
+        :class="promptEmpty ? 'opacity-50 grayscale' : ''"
+        :disabled="tasks.tasks.some((t) => t.status === 'running')"
+        @click="submit"
+      >
+        <div class="flex items-center gap-4 relative z-10">
+          <!-- Progressing bars animation on hover -->
+          <div class="flex gap-1 group-hover:gap-2 transition-all">
+            <div class="w-1 h-6 bg-ak-darker"></div>
+            <div class="w-2 h-6 bg-ak-darker"></div>
+            <div class="w-4 h-6 bg-ak-darker"></div>
+          </div>
+          <span>INITIATE_RENDER</span>
         </div>
-        <span>INITIATE_RENDER</span>
-      </div>
-      <!-- Right side arrow indicator -->
-      <div class="relative z-10 text-ak-darker font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">
-        -&gt;
-      </div>
-      <!-- Caution background striping -->
-      <div class="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]"></div>
-    </button>
+        <!-- Right side arrow indicator -->
+        <div class="relative z-10 text-ak-darker font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">
+          -&gt;
+        </div>
+        <!-- Caution background striping -->
+        <div class="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]"></div>
+      </button>
+    </div>
   </div>
 </template>

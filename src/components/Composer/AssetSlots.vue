@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useComposerStore } from '@/stores/composer'
 import { useToastStore } from '@/stores/toast'
 import { ingestFile, fileMatchesRole } from '@/lib/asset'
@@ -109,14 +109,49 @@ function onDragLeave(role: AssetRole, e: DragEvent) {
   if (e.currentTarget === e.target) dragOver.value[role] = false
 }
 
-// 粘贴文件（框需 tabindex 聚焦后才能接收 paste）
-function onPaste(role: AssetRole, e: ClipboardEvent, autoRole = false) {
-  const files = e.clipboardData?.files
-  if (files && files.length) {
-    e.preventDefault()
-    handleFiles(role, files, autoRole)
+// 全局粘贴：页面任意处粘贴文件都能入当前模式的输入框
+function isTextTarget(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable
+}
+
+// 首尾帧模式：按“先首帧后尾帧”顺序填空位（已有则跳过该栏）
+async function fillKeyframesInOrder(files: FileList) {
+  for (const file of Array.from(files)) {
+    if (!fileMatchesRole(file, 'firstFrame')) {
+      toast.show(`${file.name} 不是图片，已跳过`, 'error')
+      continue
+    }
+    let targetRole: AssetRole | null = null
+    if (assetsOf('firstFrame').length === 0) targetRole = 'firstFrame'
+    else if (assetsOf('lastFrame').length === 0) targetRole = 'lastFrame'
+    else break // 首尾帧都已填，停止
+    try {
+      const asset = await ingestFile(file, targetRole)
+      composer.addAsset(asset)
+    } catch (err) {
+      toast.show(`素材 ${file.name} 处理失败：${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
   }
 }
+
+function onDocPaste(e: ClipboardEvent) {
+  // 焦点在文本输入框时，让文本正常粘贴，不拦截
+  if (isTextTarget(e.target)) return
+  const files = e.clipboardData?.files
+  if (!files || !files.length) return
+  e.preventDefault()
+  if (props.mode === 'KEYFRAME_MODE') {
+    fillKeyframesInOrder(files)
+  } else {
+    // 参考图模式：自动判定图/视/音
+    handleFiles('referenceImage', files, true)
+  }
+}
+
+onMounted(() => document.addEventListener('paste', onDocPaste))
+onBeforeUnmount(() => document.removeEventListener('paste', onDocPaste))
 
 // ===== 素材预览 URL 解析 =====
 // sourceUrl 直传；否则从 db 取 blob 转 objectURL（适合视频/音频播放）
@@ -179,19 +214,18 @@ function closeLightbox() {
     <div v-if="props.mode === 'REF_MODE'" class="w-full">
       <!-- 添加框：无素材时显示占位；有素材时框内直接预览文件。整框可点击/拖拽/粘贴上传 -->
       <div
-        class="w-full border border-gray-700 bg-ak-dark/80 p-4 flex flex-col gap-3 hover:border-ak-400/50 transition-colors relative overflow-hidden min-h-[120px] cursor-pointer outline-none"
+        class="w-full border border-gray-700 bg-ak-dark/80 p-4 flex flex-col gap-3 hover:border-ak-400/50 transition-colors relative min-h-[150px] cursor-pointer outline-none"
         :class="dragOver['referenceImage'] ? 'border-ak-400 bg-ak-gray/40' : ''"
         tabindex="0"
         @click="fileInputs['refPool']?.click()"
         @dragover="onDragOver('referenceImage', $event as DragEvent)"
         @dragleave="onDragLeave('referenceImage', $event as DragEvent)"
         @drop="onDrop('referenceImage', $event as DragEvent, true)"
-        @paste="onPaste('referenceImage', $event as ClipboardEvent, true)"
       >
         <!-- 无素材时的占位提示（点击触发选文件） -->
         <button
           v-if="refAssets.length === 0"
-          class="w-full flex flex-col items-center justify-center gap-2 py-6 cursor-pointer group"
+          class="w-full flex-1 flex flex-col items-center justify-center gap-1.5 cursor-pointer group"
           @click.stop="fileInputs['refPool']?.click()"
         >
           <div class="flex gap-1 mb-2 opacity-50 group-hover:opacity-100 transition-opacity">
@@ -203,7 +237,7 @@ function closeLightbox() {
         </button>
 
         <!-- 有素材时：框内预览网格 -->
-        <div v-else class="flex flex-wrap gap-2">
+        <div v-else class="flex-1 flex flex-wrap gap-2 items-center">
           <div
             v-for="a in refAssets"
             :key="a.id"
@@ -258,41 +292,43 @@ function closeLightbox() {
     </div>
 
     <!-- Mode B: Keyframe Mode（左右分栏，中间切换按钮） -->
-    <div v-if="props.mode === 'KEYFRAME_MODE'" class="w-full flex items-stretch gap-2 relative">
+    <div v-if="props.mode === 'KEYFRAME_MODE'" class="w-full flex items-stretch gap-6 relative">
 
       <!-- Start Frame Slot -->
       <div
-        class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden min-h-[140px] outline-none"
+        class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
         :class="dragOver['firstFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
         tabindex="0"
         @click="fileInputs['firstFrame']?.click()"
         @dragover="onDragOver('firstFrame', $event as DragEvent)"
         @dragleave="onDragLeave('firstFrame', $event as DragEvent)"
         @drop="onDrop('firstFrame', $event as DragEvent)"
-        @paste="onPaste('firstFrame', $event as ClipboardEvent)"
       >
         <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">START_FRAME</div>
 
         <!-- 预览/占位 -->
         <div class="flex-1 flex items-center justify-center p-2">
-          <img
-            v-if="assetsOf('firstFrame')[0] && previewUrls[assetsOf('firstFrame')[0].id]"
-            :src="previewUrls[assetsOf('firstFrame')[0].id]"
-            class="max-h-[120px] max-w-full object-contain cursor-zoom-in"
-            :alt="assetsOf('firstFrame')[0].name"
-            @click.stop="openLightbox(assetsOf('firstFrame')[0])"
-          />
+          <div v-if="assetsOf('firstFrame')[0] && previewUrls[assetsOf('firstFrame')[0].id]" class="relative max-h-[120px] max-w-full">
+            <img
+              :src="previewUrls[assetsOf('firstFrame')[0].id]"
+              class="max-h-[120px] max-w-full object-contain cursor-zoom-in"
+              :alt="assetsOf('firstFrame')[0].name"
+              @click.stop="openLightbox(assetsOf('firstFrame')[0])"
+            />
+            <!-- 删除按钮（右上角） -->
+            <button
+              class="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm"
+              @click.stop="composer.removeAsset(assetsOf('firstFrame')[0].id)"
+              title="移除"
+            >✕</button>
+            <!-- 文件名横幅（与参考图模式一致） -->
+            <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('firstFrame')[0].name">{{ assetsOf('firstFrame')[0].name }}</span>
+          </div>
           <div v-else-if="assetsOf('firstFrame')[0]" class="text-gray-500 text-xs font-mono">加载中...</div>
           <div v-else class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-ak-400 transition-colors">
             <span class="text-2xl font-light leading-none">+</span>
             <span class="text-[10px] font-sans uppercase tracking-widest">Start Image</span>
           </div>
-        </div>
-
-        <!-- 底部信息条 -->
-        <div v-if="assetsOf('firstFrame')[0]" class="flex items-center justify-between px-2 py-1 bg-black/40 border-t border-gray-800 z-10">
-          <span class="text-[10px] font-mono text-gray-400 truncate">{{ assetsOf('firstFrame')[0].name }}</span>
-          <button class="text-[9px] text-gray-500 hover:text-red-500 font-sans tracking-widest transition-colors uppercase" @click.stop="composer.removeAsset(assetsOf('firstFrame')[0].id)">REMOVE</button>
         </div>
 
         <input
@@ -306,7 +342,7 @@ function closeLightbox() {
 
       <!-- 中间切换按钮：平时透明无外圈，hover 后出现圆形不透明底 -->
       <button
-        class="self-center z-20 w-9 h-9 -mx-1 flex-shrink-0 flex items-center justify-center rounded-full border border-transparent bg-transparent text-gray-500/70 hover:text-ak-400 hover:bg-ak-gray hover:border-ak-400 hover:shadow-lg hover:scale-110 transition-all duration-200"
+        class="self-center z-20 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full border border-transparent bg-transparent text-gray-500/70 hover:text-ak-400 hover:bg-ak-gray hover:border-ak-400 hover:shadow-lg hover:scale-110 transition-all duration-200"
         @click="swapKeyframes"
         title="Swap Frames"
       >
@@ -315,35 +351,38 @@ function closeLightbox() {
 
       <!-- End Frame Slot -->
       <div
-        class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden min-h-[140px] outline-none"
+        class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
         :class="dragOver['lastFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
         tabindex="0"
         @click="fileInputs['lastFrame']?.click()"
         @dragover="onDragOver('lastFrame', $event as DragEvent)"
         @dragleave="onDragLeave('lastFrame', $event as DragEvent)"
         @drop="onDrop('lastFrame', $event as DragEvent)"
-        @paste="onPaste('lastFrame', $event as ClipboardEvent)"
       >
         <div class="absolute top-0 right-0 bg-gray-600 text-white font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">END_FRAME</div>
 
         <div class="flex-1 flex items-center justify-center p-2">
-          <img
-            v-if="assetsOf('lastFrame')[0] && previewUrls[assetsOf('lastFrame')[0].id]"
-            :src="previewUrls[assetsOf('lastFrame')[0].id]"
-            class="max-h-[120px] max-w-full object-contain cursor-zoom-in"
-            :alt="assetsOf('lastFrame')[0].name"
-            @click.stop="openLightbox(assetsOf('lastFrame')[0])"
-          />
+          <div v-if="assetsOf('lastFrame')[0] && previewUrls[assetsOf('lastFrame')[0].id]" class="relative max-h-[120px] max-w-full">
+            <img
+              :src="previewUrls[assetsOf('lastFrame')[0].id]"
+              class="max-h-[120px] max-w-full object-contain cursor-zoom-in"
+              :alt="assetsOf('lastFrame')[0].name"
+              @click.stop="openLightbox(assetsOf('lastFrame')[0])"
+            />
+            <!-- 删除按钮（左上角，避开右上角 END_FRAME 角标） -->
+            <button
+              class="absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm"
+              @click.stop="composer.removeAsset(assetsOf('lastFrame')[0].id)"
+              title="移除"
+            >✕</button>
+            <!-- 文件名横幅（与参考图模式一致） -->
+            <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('lastFrame')[0].name">{{ assetsOf('lastFrame')[0].name }}</span>
+          </div>
           <div v-else-if="assetsOf('lastFrame')[0]" class="text-gray-500 text-xs font-mono">加载中...</div>
           <div v-else class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-white transition-colors">
             <span class="text-2xl font-light leading-none">+</span>
             <span class="text-[10px] font-sans uppercase tracking-widest">End Image</span>
           </div>
-        </div>
-
-        <div v-if="assetsOf('lastFrame')[0]" class="flex items-center justify-between px-2 py-1 bg-black/40 border-t border-gray-800 z-10">
-          <span class="text-[10px] font-mono text-gray-400 truncate">{{ assetsOf('lastFrame')[0].name }}</span>
-          <button class="text-[9px] text-gray-500 hover:text-red-500 font-sans tracking-widest transition-colors uppercase" @click.stop="composer.removeAsset(assetsOf('lastFrame')[0].id)">REMOVE</button>
         </div>
 
         <input
