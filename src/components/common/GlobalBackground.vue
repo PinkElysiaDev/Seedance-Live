@@ -2,11 +2,11 @@
   <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-ak-darker">
     <!-- 外层：静态旋转，让网格倾斜 -->
     <div class="absolute inset-0" style="transform: rotate(-15deg)">
-      <!-- 内层：粒子被钉在网格坐标上，共享全局平移，整体像网格匀速通过画面 -->
+      <!-- 内层：粒子被钉在网格坐标上，共享全局平移，整体像网格匀速通过画面。整体虚焦（blur） -->
       <div
         v-for="seal in seals"
         :key="seal.key"
-        class="absolute flex items-center justify-center p-4"
+        class="absolute flex items-center justify-center p-4 blur-[3px]"
         :style="{
           left: `${seal.x}px`,
           top: `${seal.y}px`,
@@ -14,12 +14,12 @@
           height: `${cellPx}px`,
         }"
       >
-        <img :src="`/images/${seal.file}`" class="w-full h-full object-contain opacity-[0.11]" alt="" />
+        <img :src="`/images/${seal.file}`" class="w-full h-full object-contain opacity-[0.13]" alt="" />
       </div>
     </div>
 
-    <!-- 中心亮、四周暗的蒙版（盖在刻印之上） -->
-    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(10,10,10,0)_0%,_rgba(10,10,10,0.55)_45%,_rgba(10,10,10,0.92)_100%)]"></div>
+    <!-- 四周暗、中心亮净的聚光蒙版（中心透出底色，四周压暗；中心亮区刻印几乎不可见） -->
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(10,10,10,0)_0%,_rgba(10,10,10,0.35)_35%,_rgba(10,10,10,0.85)_75%,_rgba(10,10,10,0.98)_100%)]"></div>
   </div>
 </template>
 

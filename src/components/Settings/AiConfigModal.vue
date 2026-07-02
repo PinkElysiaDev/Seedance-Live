@@ -115,53 +115,53 @@ function apply() {
 <template>
   <Modal :show="props.show" title="✨ AI_PARSE_MODULE //" width="680px" @close="emit('close')">
     <div class="space-y-4">
-      <p class="font-mono text-[10px] text-gray-500 leading-relaxed border-l-2 border-elysia-400 pl-2">
+      <p class="font-mono text-[10px] text-gray-500 leading-relaxed border-l-2 border-ak-400 pl-2">
         // 粘贴站点 API 文档内容、上传文档截图，或填文档 URL（经代理抓取）。将调用你在「AI 辅助」配置的大模型生成自定义请求模板。
       </p>
 
-      <div class="flex gap-1 border border-tactical-700 bg-tactical-800 p-1 clip-chamfer w-fit">
+      <div class="flex gap-1 border border-gray-800 bg-ak-dark p-1 w-fit">
         <button v-for="t in [{k:'text',l:'TEXT_INPUT'},{k:'image',l:'IMAGE_UPLOAD'},{k:'url',l:'DOC_URL'}]" :key="t.k"
-          class="px-4 py-1.5 font-mono text-[10px] clip-chamfer transition-all"
-          :class="mode === t.k ? 'bg-elysia-400 text-tactical-900 font-bold shadow-[0_0_8px_rgba(255,135,178,0.4)]' : 'text-gray-500 hover:text-elysia-300'"
+          class="px-4 py-1.5 font-mono text-[10px] transition-all"
+          :class="mode === t.k ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'text-gray-500 hover:text-white'"
           @click="mode = t.k as typeof mode">> {{ t.l }}</button>
       </div>
 
-      <textarea v-if="mode === 'text'" v-model="docText" rows="6" placeholder=">_ Paste API documentation here..." class="w-full bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-xs p-3 clip-chamfer focus:border-elysia-400 outline-none" />
+      <textarea v-if="mode === 'text'" v-model="docText" rows="6" placeholder=">_ Paste API documentation here..." class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs p-3 focus:border-ak-400 outline-none" />
 
-      <div v-else-if="mode === 'image'" class="space-y-3 p-4 border border-dashed border-tactical-600 bg-tactical-900/50 clip-chamfer">
-        <input type="file" accept="image/*" multiple class="text-[10px] font-mono text-gray-400 file:bg-tactical-800 file:border file:border-tactical-600 file:text-elysia-400 file:px-3 file:py-1 file:clip-chamfer hover:file:bg-tactical-700 transition-colors" @change="onPickImages" />
+      <div v-else-if="mode === 'image'" class="space-y-3 p-4 border border-dashed border-gray-800 bg-ak-dark/50">
+        <input type="file" accept="image/*" multiple class="text-[10px] font-mono text-gray-400 file:bg-ak-dark file:border file:border-gray-800 file:text-ak-400 file:px-3 file:py-1 hover:file:bg-ak-gray transition-colors" @change="onPickImages" />
         <div class="flex flex-wrap gap-2">
           <div v-for="(img, i) in images" :key="i" class="relative group">
-            <img :src="img" class="h-24 w-auto object-cover border border-tactical-600 group-hover:border-elysia-400 transition-colors" />
-            <button class="absolute -right-1 -top-1 bg-red-900/80 text-red-400 border border-red-500 hover:bg-red-500 hover:text-tactical-900 px-1 text-[10px] font-mono clip-chamfer transition-colors" @click="removeImage(i)">✕</button>
+            <img :src="img" class="h-24 w-auto object-cover border border-gray-800 group-hover:border-ak-400 transition-colors" />
+            <button class="absolute -right-1 -top-1 bg-red-950/85 text-red-400 border border-red-500/50 hover:bg-red-500 hover:text-ak-darker px-1 text-[10px] font-mono transition-colors" @click="removeImage(i)">✕</button>
           </div>
         </div>
       </div>
 
       <div v-else>
-        <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full bg-tactical-900 border border-tactical-600 text-elysia-50 font-mono text-xs px-3 py-2 clip-chamfer focus:border-elysia-400 outline-none" />
+        <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs px-3 py-2 focus:border-ak-400 outline-none" />
         <p class="mt-1 font-mono text-[10px] text-gray-600">// 需在「代理」中启用代理才能跨域抓取；失败请改用粘贴内容或截图。</p>
       </div>
 
-      <button class="bg-elysia-400 text-tactical-900 font-mono font-bold text-xs px-6 py-2.5 clip-chamfer hover:bg-elysia-300 shadow-[0_0_10px_rgba(255,135,178,0.4)] transition-all disabled:opacity-50 disabled:grayscale" :disabled="loading" @click="parse">
+      <button class="bg-white text-ak-darker font-mono font-bold text-xs px-6 py-2.5 hover:bg-ak-400 shadow-[0_0_10px_rgba(0,229,255,0.3)] transition-all disabled:opacity-50 disabled:grayscale" :disabled="loading" @click="parse">
         {{ loading ? '> PROCESSING...' : '> INITIATE_PARSE' }}
       </button>
 
-      <div v-if="parsed" class="border border-elysia-400/30 bg-tactical-800 p-4 clip-chamfer mt-4">
-        <div class="font-mono text-[10px] font-bold text-elysia-500 border-b border-elysia-400/20 pb-1 mb-3">PARSE_RESULT_PREVIEW //</div>
+      <div v-if="parsed" class="border border-ak-400/30 bg-ak-darker p-4 mt-4">
+        <div class="font-mono text-[10px] font-bold text-ak-400 border-b border-gray-800 pb-1 mb-3">PARSE_RESULT_PREVIEW //</div>
         <div class="space-y-1.5 font-mono text-[10px] text-gray-400">
-          <div><span class="text-gray-600">MODEL:</span> <span class="text-elysia-100">{{ parsed.model || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">SUBMIT_URL:</span> <span class="text-elysia-100">{{ parsed.submit?.url || 'N/A' }}</span></div>
-          <div class="pt-1"><span class="text-gray-600 block mb-1">SUBMIT_BODY:</span><pre class="max-h-32 overflow-auto bg-tactical-900 border border-tactical-700 p-2 text-elysia-300 clip-chamfer">{{ parsed.submit?.body }}</pre></div>
-          <div class="pt-2"><span class="text-gray-600">POLL_URL:</span> <span class="text-elysia-100">{{ parsed.poll?.url || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">TASK_ID_PATH:</span> <span class="text-elysia-100">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">STATUS_PATH:</span> <span class="text-elysia-100">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">SUCCESS_VALUES:</span> <span class="text-elysia-100">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">FAILURE_VALUES:</span> <span class="text-elysia-100">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">VIDEO_URL_PATH:</span> <span class="text-elysia-100">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
-          <div v-if="parsed.notes" class="text-elysia-400 mt-2 border-l-2 border-elysia-400 pl-2">NOTE: {{ parsed.notes }}</div>
+          <div><span class="text-gray-600">MODEL:</span> <span class="text-white">{{ parsed.model || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">SUBMIT_URL:</span> <span class="text-white">{{ parsed.submit?.url || 'N/A' }}</span></div>
+          <div class="pt-1"><span class="text-gray-600 block mb-1">SUBMIT_BODY:</span><pre class="max-h-32 overflow-auto bg-ak-dark border border-gray-800 p-2 text-ak-400">{{ parsed.submit?.body }}</pre></div>
+          <div class="pt-2"><span class="text-gray-600">POLL_URL:</span> <span class="text-white">{{ parsed.poll?.url || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">TASK_ID_PATH:</span> <span class="text-white">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">STATUS_PATH:</span> <span class="text-white">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">SUCCESS_VALUES:</span> <span class="text-white">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">FAILURE_VALUES:</span> <span class="text-white">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">VIDEO_URL_PATH:</span> <span class="text-white">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
+          <div v-if="parsed.notes" class="text-ak-400 mt-2 border-l-2 border-ak-400 pl-2">NOTE: {{ parsed.notes }}</div>
         </div>
-        <button class="mt-4 border border-teal-500/50 bg-teal-900/20 text-teal-400 px-4 py-2 font-mono text-xs clip-chamfer hover:bg-teal-400 hover:text-tactical-900 transition-colors" @click="apply">> APPLY_TO_PROFILE</button>
+        <button class="mt-4 border border-teal-500/50 bg-teal-950/20 text-teal-400 px-4 py-2 font-mono text-xs hover:bg-teal-400 hover:text-ak-darker transition-colors" @click="apply">> APPLY_TO_PROFILE</button>
       </div>
     </div>
   </Modal>

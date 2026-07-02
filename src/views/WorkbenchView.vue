@@ -2,10 +2,10 @@
   <div class="h-full flex overflow-hidden w-full relative">
     <!-- Split Screen Layout -->
 
-    <!-- Left Side: Controls 贯穿式条幅（水平位置不变，高度贯通页面上下） -->
+    <!-- Left Side: Controls 贯穿式条幅（普通 flex 子项，位于 main 居中区域左侧 = 中间偏左，高度贯通） -->
     <div class="w-[450px] flex-shrink-0 h-full flex flex-col bg-ak-dark/95 backdrop-blur-md border-r border-gray-800 p-8 overflow-y-auto hide-scrollbar z-10 shadow-[10px_0_30px_rgba(0,0,0,0.85)] transition-all duration-500 ease-out hover:shadow-[14px_0_40px_rgba(0,0,0,0.9)]">
 
-      <!-- 顶部留白：让出 header 浮层 brand 的高度，标题统一由 App.vue header 显示 -->
+      <!-- 顶部留白：让出 header 浮层 brand 高度，标题统一由 App.vue header 显示 -->
       <div class="h-[72px] flex-shrink-0"></div>
 
       <!-- Top: Provider Selector Dropdown -->

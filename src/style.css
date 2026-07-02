@@ -54,6 +54,33 @@ body {
   scrollbar-width: none;
 }
 
+/* 隐藏 number input 原生上下箭头，改用自定义按钮 */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* 顶部 Logo 发光 + 呼吸灯效（发光起伏 + 明灭） */
+.logo-glow {
+  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.55)) drop-shadow(0 0 12px rgba(0, 229, 255, 0.25));
+  animation: logo-breathe 3.2s ease-in-out infinite;
+}
+@keyframes logo-breathe {
+  0%, 100% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.25)) drop-shadow(0 0 6px rgba(0, 229, 255, 0.1));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 11px rgba(0, 229, 255, 0.85)) drop-shadow(0 0 22px rgba(0, 229, 255, 0.45));
+  }
+}
+
 /* Fly-through router transition (冲向镜头) */
 .fly-through-enter-active,
 .fly-through-leave-active {
@@ -72,4 +99,48 @@ body {
   opacity: 0;
   /* 向着镜头冲来并穿透 */
   transform: translateZ(400px) scale(1.3);
+}
+
+/* Toast 动画 keyframes（定义在全局，避免 scoped style 重命名导致引用失效） */
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes eq {
+  0% { height: 8px; }
+  50% { height: 20px; }
+  100% { height: 12px; }
+}
+
+@keyframes shrink-width {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Terminal 空状态：多层光圈呼吸 + 核心脉动（无缝循环） */
+@keyframes terminal-breathe {
+  0%   { transform: scale(0.6); opacity: 0; }
+  40%  { opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes terminal-core {
+  0%, 100% { transform: scale(0.85); box-shadow: 0 0 8px rgba(0,229,255,0.4); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 18px rgba(0,229,255,0.8); }
+}
+@keyframes terminal-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 级别筛选芯片灯光呼吸（无缝循环，强呼吸：opacity 大幅起伏 + 缩放） */
+@keyframes lamp-breathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+/* verbose_log status line breathe animation */
+@keyframes line-breathe {
+  0%, 100% { opacity: 0.3; filter: drop-shadow(0 0 1px rgba(0, 229, 255, 0.4)); }
+  50%      { opacity: 1; filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.9)); }
 }

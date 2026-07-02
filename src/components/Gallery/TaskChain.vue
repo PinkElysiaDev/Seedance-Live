@@ -31,7 +31,7 @@ function label(t: VideoTask): string {
 
 function statusDot(t: VideoTask): string {
   switch (t.status) {
-    case 'running': return 'bg-elysia-400 shadow-[0_0_5px_#FF87B2]'
+    case 'running': return 'bg-ak-400 shadow-[0_0_5px_#00E5FF]'
     case 'succeeded': return 'bg-teal-400 shadow-[0_0_5px_#2dd4bf]'
     case 'failed': case 'cancelled': case 'expired': return 'bg-red-500 shadow-[0_0_5px_#ef4444]'
     default: return 'bg-gray-500'
@@ -40,23 +40,23 @@ function statusDot(t: VideoTask): string {
 </script>
 
 <template>
-  <div v-if="chain.length > 1" class="border border-tactical-700 bg-tactical-800 p-3 clip-chamfer">
-    <div class="mb-2 text-[10px] font-mono font-bold text-elysia-500 uppercase">SYS_CHAIN_LINK // {{ chain.length }} SEGMENTS</div>
+  <div v-if="chain.length > 1" class="border border-gray-800 bg-ak-dark/50 p-3 clip-chamfer">
+    <div class="mb-2 text-[10px] font-mono font-bold text-ak-400 uppercase">SYS_CHAIN_LINK // {{ chain.length }} SEGMENTS</div>
     <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
       <template v-for="(t, i) in chain" :key="t.id">
         <button
           class="flex shrink-0 flex-col items-center gap-1 clip-chamfer p-1.5 transition-all"
-          :class="t.id === activeId ? 'border border-elysia-400 bg-elysia-400/10 shadow-[0_0_8px_rgba(255,135,178,0.3)]' : 'border border-tactical-600 bg-tactical-900 hover:border-elysia-400/50'"
+          :class="t.id === activeId ? 'border border-ak-400 bg-ak-400/10 shadow-[0_0_8px_rgba(0,229,255,0.3)]' : 'border border-gray-800 bg-ak-darker hover:border-ak-400/50'"
           @click="emit('select', t.id)"
         >
-          <div class="relative h-12 w-20 overflow-hidden bg-black border border-tactical-700">
+          <div class="relative h-12 w-20 overflow-hidden bg-black border border-gray-800">
             <img v-if="covers[t.id]" :src="covers[t.id]!" class="h-full w-full object-cover opacity-80" />
             <span v-else class="flex h-full items-center justify-center text-[10px] font-mono text-gray-500">N/A</span>
             <span class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rotate-45" :class="statusDot(t)" />
           </div>
-          <span class="text-[9px] font-mono" :class="t.id === activeId ? 'text-elysia-300' : 'text-gray-500'">{{ label(t) }}</span>
+          <span class="text-[9px] font-mono" :class="t.id === activeId ? 'text-ak-400' : 'text-gray-500'">{{ label(t) }}</span>
         </button>
-        <span v-if="i < chain.length - 1" class="shrink-0 text-elysia-400 font-mono text-xs animate-pulse">>></span>
+        <span v-if="i < chain.length - 1" class="shrink-0 text-ak-400 font-mono text-xs animate-pulse">>></span>
       </template>
     </div>
   </div>

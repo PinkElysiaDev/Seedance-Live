@@ -100,7 +100,7 @@ function selectInChain(id: string) {
       <button
         v-for="f in filters"
         :key="f.value"
-        class="group relative flex items-center justify-between w-full text-left py-3 px-4 transition-all duration-300 bg-ak-gray hover:bg-ak-400/20"
+        class="group relative flex items-center justify-between w-full h-12 text-left px-4 transition-colors duration-300 bg-ak-gray hover:bg-ak-400/20 overflow-hidden"
         @click="filter = f.value"
       >
         <span
@@ -110,14 +110,20 @@ function selectInChain(id: string) {
           {{ f.label }}
         </span>
         <span
-          v-if="filter === f.value"
-          class="font-sans font-black text-ak-400 opacity-50 z-10"
+          class="font-sans font-black text-ak-400 z-10 transition-opacity duration-300"
+          :class="filter === f.value ? 'opacity-50' : 'opacity-0'"
         >&lt;</span>
 
         <!-- Active Background Highlight -->
         <div
           class="absolute inset-0 bg-ak-400/10 transition-opacity duration-300"
-          :class="filter === f.value ? 'opacity-100 border-l-4 border-ak-400' : 'opacity-0 border-l-4 border-transparent'"
+          :class="filter === f.value ? 'opacity-100' : 'opacity-0'"
+        ></div>
+
+        <!-- 选中态竖条：从右向左出现并移动到最左侧 -->
+        <div
+          class="absolute top-0 bottom-0 w-1 bg-ak-400 transition-all duration-300 ease-out z-20"
+          :class="filter === f.value ? 'left-0 opacity-100' : 'left-full opacity-0'"
         ></div>
       </button>
 
