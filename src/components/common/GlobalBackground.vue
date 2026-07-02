@@ -6,7 +6,7 @@
       <div
         v-for="seal in seals"
         :key="seal.key"
-        class="absolute flex items-center justify-center p-4 blur-[3px]"
+        class="absolute flex items-center justify-center p-4 blur-[1px]"
         :style="{
           left: `${seal.x}px`,
           top: `${seal.y}px`,
