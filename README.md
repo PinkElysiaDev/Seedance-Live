@@ -2,6 +2,10 @@
 
 Seedance Live 是一个**纯前端**的 Seedance 2.0 视频生成工作台。调用字节跳动火山方舟的 doubao-seedance-2.0 系列模型，支持文生视频、首尾帧图生视频、参考图/视频/音频、续帧成链、联网搜索与音频生成。
 
+> [!TIP]
+> **在线体验：** [https://pinkelysiadev.github.io/Seedance-Live/](https://pinkelysiadev.github.io/Seedance-Live/)<br>
+> 纯前端静态部署。首次使用前需要在设置中配置 API Key；若浏览器请求被 CORS 拦截，请配置代理。
+
 所有数据（任务、素材、生成的视频）都存在浏览器本地（IndexedDB），无后端、无云存储。API Key 仅保存在你自己的浏览器中。
 
 ---

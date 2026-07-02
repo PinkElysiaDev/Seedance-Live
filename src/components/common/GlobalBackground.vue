@@ -14,7 +14,7 @@
           height: `${cellPx}px`,
         }"
       >
-        <img :src="`/images/${seal.file}`" class="w-full h-full object-contain opacity-[0.13]" alt="" />
+        <img :src="publicAsset(`images/${seal.file}`)" class="w-full h-full object-contain opacity-[0.13]" alt="" />
       </div>
     </div>
 
@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { publicAsset } from '@/lib/publicAsset'
 
 const LOGO_FILES = [
   '0045A6E438A50352E2AF924005AC8CD6.png',
