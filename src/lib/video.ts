@@ -1,12 +1,11 @@
-// 视频处理：首帧截图(cover)、时长探测
-
+/** 视频元信息：宽高与时长（毫秒）。 */
 export interface VideoMeta {
   width: number
   height: number
   durationMs: number
 }
 
-// 探测视频宽高与时长
+/** 探测视频宽高与时长，失败时 reject。 */
 export function probeVideo(blob: Blob): Promise<VideoMeta> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob)
@@ -34,7 +33,10 @@ export function probeVideo(blob: Blob): Promise<VideoMeta> {
   })
 }
 
-// 截取首帧作为 cover（dataUrl）
+/**
+ * 截取视频首帧作为封面，返回 dataUrl。
+ * 跳到 0.1s 取帧避免全黑首帧，并按 maxW 等比缩小、以 quality 压缩为 webp。
+ */
 export function captureCover(blob: Blob, maxW = 640, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob)
@@ -85,7 +87,7 @@ export function captureCover(blob: Blob, maxW = 640, quality = 0.85): Promise<st
   })
 }
 
-// 探测音频时长
+/** 探测音频时长（毫秒），失败时 reject。 */
 export function probeAudio(blob: Blob): Promise<{ durationMs: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch } from 'vue'
 import type { VideoTask } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
 import { MODEL_META } from '@/config/models'
@@ -21,15 +21,12 @@ async function loadCovers() {
   covers.value = next
 }
 watch(() => props.chain, loadCovers, { immediate: true })
-onUnmounted(() => {
-  // 释放可能的 object URL（cover 是 dataUrl，无需释放）
-})
 
-function label(t: VideoTask): string {
+function modelLabel(t: VideoTask): string {
   return MODEL_META[t.params.model]?.label ?? t.params.model
 }
 
-function statusDot(t: VideoTask): string {
+function statusDotClass(t: VideoTask): string {
   switch (t.status) {
     case 'running': return 'bg-ak-400 shadow-[0_0_5px_#00E5FF]'
     case 'succeeded': return 'bg-teal-400 shadow-[0_0_5px_#2dd4bf]'
@@ -45,16 +42,16 @@ function statusDot(t: VideoTask): string {
     <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
       <template v-for="(t, i) in chain" :key="t.id">
         <button
-          class="flex shrink-0 flex-col items-center gap-1 clip-chamfer p-1.5 transition-all"
+          class="flex shrink-0 flex-col items-center gap-1 clip-chamfer p-1.5 transition"
           :class="t.id === activeId ? 'border border-ak-400 bg-ak-400/10 shadow-[0_0_8px_rgba(0,229,255,0.3)]' : 'border border-gray-800 bg-ak-darker hover:border-ak-400/50'"
           @click="emit('select', t.id)"
         >
           <div class="relative h-12 w-20 overflow-hidden bg-black border border-gray-800">
-            <img v-if="covers[t.id]" :src="covers[t.id]!" class="h-full w-full object-cover opacity-80" />
+            <img v-if="covers[t.id]" :src="covers[t.id]!" loading="lazy" class="h-full w-full object-cover opacity-80" />
             <span v-else class="flex h-full items-center justify-center text-[10px] font-mono text-gray-500">N/A</span>
-            <span class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rotate-45" :class="statusDot(t)" />
+            <span class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rotate-45" :class="statusDotClass(t)" />
           </div>
-          <span class="text-[9px] font-mono" :class="t.id === activeId ? 'text-ak-400' : 'text-gray-500'">{{ label(t) }}</span>
+          <span class="text-[9px] font-mono" :class="t.id === activeId ? 'text-ak-400' : 'text-gray-500'">{{ modelLabel(t) }}</span>
         </button>
         <span v-if="i < chain.length - 1" class="shrink-0 text-ak-400 font-mono text-xs animate-pulse">>></span>
       </template>

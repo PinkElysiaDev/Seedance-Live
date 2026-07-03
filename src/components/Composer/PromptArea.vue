@@ -5,7 +5,7 @@ import { PROMPT_MAX, PROMPT_SUGGEST } from '@/config/options'
 
 const composer = useComposerStore()
 const count = computed(() => composer.prompt.length)
-const overSuggest = computed(() => count.value > PROMPT_SUGGEST)
+const isOverSuggest = computed(() => count.value > PROMPT_SUGGEST)
 
 const textareaRef = ref<HTMLTextAreaElement>()
 
@@ -46,7 +46,7 @@ onMounted(() => {
 
     <div
       class="absolute bottom-2 right-2 font-mono text-[10px] transition-colors bg-ak-darker/80 px-1 py-0.5"
-      :class="overSuggest ? 'text-red-500 animate-pulse' : 'text-gray-500 group-focus-within:text-ak-400'"
+      :class="isOverSuggest ? 'text-red-500 animate-pulse' : 'text-gray-500 group-focus-within:text-ak-400'"
     >
       [ {{ count }} / {{ PROMPT_MAX }} ]
     </div>

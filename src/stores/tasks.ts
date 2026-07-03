@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { VideoTask, StoredAsset } from '@/types'
-import { genId } from '@/lib/id'
+import { generateId } from '@/lib/id'
 import { isRecoverableError, type ProxyConfig } from '@/types'
 import { resolveProvider } from '@/provider/resolve'
 import type { SubmitContext } from '@/provider/types'
@@ -35,7 +35,7 @@ import { log } from '@/lib/logger'
 import { useSettingsStore } from './settings'
 import { useComposerStore } from './composer'
 
-// 模块级调度状态
+// 模块级调度状态：定时器、请求控制器、重连次数均按 taskId 维护
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const abortControllers = new Map<string, AbortController>()
 const recoverAttempts = new Map<string, number>()
@@ -50,11 +50,7 @@ function clearTimer(taskId: string) {
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const t = setTimeout(() => {
-      timers.delete('__sleep')
-      resolve()
-    }, ms)
-    timers.set('__sleep', t)
+    const t = setTimeout(resolve, ms)
     if (signal) {
       signal.addEventListener('abort', () => {
         clearTimeout(t)
@@ -64,33 +60,32 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   })
 }
 
-// 下载远程视频为 Blob（CORS 失败则返回 null，调用方保留远程 URL 兜底）
-async function downloadVideoBlob(url: string, signal: AbortSignal): Promise<Blob | null> {
+// 下载远程资源为 Blob（CORS 失败则返回 null，调用方按需兜底）
+async function fetchBlob(url: string, signal: AbortSignal): Promise<Blob | null> {
   try {
     const res = await fetch(url, { signal })
     if (!res.ok) return null
-    const blob = await res.blob()
-    if (!blob.type.startsWith('video/') && blob.size === 0) return null
-    return blob
+    return await res.blob()
   } catch {
     return null
   }
 }
 
+async function downloadVideoBlob(url: string, signal: AbortSignal): Promise<Blob | null> {
+  const blob = await fetchBlob(url, signal)
+  if (!blob) return null
+  if (!blob.type.startsWith('video/') && blob.size === 0) return null
+  return blob
+}
+
 async function downloadImageCover(url: string, signal: AbortSignal): Promise<string | null> {
-  try {
-    const res = await fetch(url, { signal })
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return blobToDataUrl(blob)
-  } catch {
-    return null
-  }
+  const blob = await fetchBlob(url, signal)
+  return blob ? blobToDataUrl(blob) : null
 }
 
 export const useTasksStore = defineStore('tasks', () => {
   const tasks = ref<VideoTask[]>([])
-  const initialized = ref(false)
+  const isInitialized = ref(false)
 
   function findTask(id: string): VideoTask | undefined {
     return tasks.value.find((t) => t.id === id)
@@ -103,7 +98,10 @@ export const useTasksStore = defineStore('tasks', () => {
     await putTask(tasks.value[idx])
   }
 
-  // —— 提交 ——
+  /**
+   * 提交当前 composer 草稿为生成任务：校验 → 入库 → 异步执行（提交 + 轮询）。
+   * 成功返回 taskId；失败返回 error（此时任务未入库）。
+   */
   async function submitTask(): Promise<{ ok: boolean; error?: string; taskId?: string }> {
     const composer = useComposerStore()
     const settings = useSettingsStore()
@@ -115,7 +113,7 @@ export const useTasksStore = defineStore('tasks', () => {
     if (errors.length) return { ok: false, error: errors[0] }
 
     const task: VideoTask = {
-      id: genId(),
+      id: generateId(),
       prompt: composer.prompt.trim(),
       params: { ...composer.params },
       assetIds: [...composer.assetIds],
@@ -308,13 +306,13 @@ export const useTasksStore = defineStore('tasks', () => {
     log.info('poll', `开始下载视频 ${fallbackUrl?.slice(0, 80)}`, undefined, taskId)
     const blob = await downloadVideoBlob(result.videoUrl, signal)
     if (blob) {
-      const blobId = genId()
+      const blobId = generateId()
       await putBlob({ id: blobId, buffer: await blob.arrayBuffer(), mime: blob.type || 'video/mp4' })
       videoBlobId = blobId
       log.info('poll', `视频已下载并入库（${blob.size}B）`, undefined, taskId)
       try {
         const cover = await captureCover(blob)
-        const coverId = genId()
+        const coverId = generateId()
         await putCover({ id: coverId, dataUrl: cover })
         coverImageId = coverId
       } catch (err) {
@@ -329,7 +327,7 @@ export const useTasksStore = defineStore('tasks', () => {
       if (isHttpUrl(result.lastFrameUrl)) {
         const coverDataUrl = await downloadImageCover(result.lastFrameUrl, signal)
         if (coverDataUrl) {
-          const coverId = genId()
+          const coverId = generateId()
           await putCover({ id: coverId, dataUrl: coverDataUrl })
           lastFrameImageId = coverId
         }
@@ -339,7 +337,7 @@ export const useTasksStore = defineStore('tasks', () => {
     await updateTask(taskId, {
       status: 'succeeded',
       videoBlobId,
-      videoUrl: videoBlobId ? fallbackUrl : fallbackUrl,
+      videoUrl: fallbackUrl,
       coverImageId,
       lastFrameImageId,
       finishedAt: Date.now(),
@@ -434,7 +432,10 @@ export const useTasksStore = defineStore('tasks', () => {
     await dbDeleteTask(taskId)
   }
 
-  // —— 续帧：用 parent 的末帧作为新任务首帧 ——
+  /**
+   * 续帧：用父任务的末帧作为新任务的首帧，复用父任务参数创建并执行新任务。
+   * 父任务须已生成末帧（lastFrameImageId），否则返回错误。
+   */
   async function continueFromTask(parentId: string): Promise<{ ok: boolean; error?: string; taskId?: string }> {
     const parent = findTask(parentId)
     if (!parent) return { ok: false, error: '源任务不存在' }
@@ -445,9 +446,9 @@ export const useTasksStore = defineStore('tasks', () => {
     if (!cover) return { ok: false, error: '末帧数据已丢失' }
     // 把末帧 dataUrl 落成 blob + asset
     const blob = await dataUrlToBlob(cover.dataUrl)
-    const blobId = genId()
+    const blobId = generateId()
     await putBlob({ id: blobId, buffer: await blob.arrayBuffer(), mime: blob.type || 'image/png' })
-    const assetId = genId()
+    const assetId = generateId()
     await putAsset({
       id: assetId,
       role: 'firstFrame',
@@ -462,7 +463,7 @@ export const useTasksStore = defineStore('tasks', () => {
     // 用 composer 草稿参数 + parent 参数创建新任务
     const composer = useComposerStore()
     const task: VideoTask = {
-      id: genId(),
+      id: generateId(),
       prompt: composer.prompt.trim() || parent.prompt,
       params: { ...parent.params, returnLastFrame: true },
       assetIds: [assetId],
@@ -484,11 +485,11 @@ export const useTasksStore = defineStore('tasks', () => {
 
   // —— 初始化：从 DB 加载并恢复未完成任务 ——
   async function initTasks() {
-    if (initialized.value) return
+    if (isInitialized.value) return
     const all = await getAllTasks()
     all.sort((a, b) => b.createdAt - a.createdAt)
     tasks.value = all
-    initialized.value = true
+    isInitialized.value = true
     log.info('task', `初始化：加载 ${all.length} 个任务`, {
       running: all.filter((t) => t.status === 'running').length,
       queued: all.filter((t) => t.status === 'queued').length,
@@ -516,7 +517,10 @@ export const useTasksStore = defineStore('tasks', () => {
     }
   }
 
-  // —— 取可播放视频 URL ——
+  /**
+   * 取可播放视频 URL：优先用本地 blob 创建 object URL，否则回退远程 URL。
+   * 调用方负责在用完后释放返回的 blob: URL。
+   */
   async function resolveVideoUrl(task: VideoTask): Promise<string | null> {
     if (task.videoBlobId) {
       const stored = await getBlob(task.videoBlobId)
@@ -528,33 +532,35 @@ export const useTasksStore = defineStore('tasks', () => {
     return task.videoUrl ?? null
   }
 
+  // cover 与末帧都存为 cover 记录（dataUrl），共用同一段解析逻辑
+  async function resolveCoverDataUrl(coverImageId?: string): Promise<string | null> {
+    if (!coverImageId) return null
+    const cover = await getCover(coverImageId)
+    return cover?.dataUrl ?? null
+  }
+
   async function resolveCoverUrl(task: VideoTask): Promise<string | null> {
-    if (task.coverImageId) {
-      const cover = await getCover(task.coverImageId)
-      if (cover) return cover.dataUrl
-    }
-    return null
+    return resolveCoverDataUrl(task.coverImageId)
   }
 
   async function resolveLastFrameUrl(task: VideoTask): Promise<string | null> {
-    if (task.lastFrameImageId) {
-      const cover = await getCover(task.lastFrameImageId)
-      if (cover) return cover.dataUrl
-    }
-    return null
+    return resolveCoverDataUrl(task.lastFrameImageId)
   }
 
-  // 续帧链：给定任务，返回从最早祖先到该任务、再到其后代的完整链路（按时间正序）
+  /**
+   * 续帧链：给定任务，返回从最早祖先到该任务、再到其后代的完整链路（按时间正序）。
+   * 用于详情弹窗展示同一条续帧谱系。
+   */
   function getTaskChain(taskId: string): VideoTask[] {
     const byId = new Map(tasks.value.map((t) => [t.id, t]))
     // 向上追溯祖先
     const ancestors: VideoTask[] = []
-    let cur = byId.get(taskId)
-    while (cur?.parentTaskId) {
-      const parent = byId.get(cur.parentTaskId)
+    let current = byId.get(taskId)
+    while (current?.parentTaskId) {
+      const parent = byId.get(current.parentTaskId)
       if (!parent) break
       ancestors.unshift(parent)
-      cur = parent
+      current = parent
     }
     // 向下递归后代（BFS，按 createdAt 排序）
     const descendants: VideoTask[] = []
@@ -604,16 +610,16 @@ export const useTasksStore = defineStore('tasks', () => {
     const incomingTasks = Array.isArray(data.tasks) ? data.tasks : []
     const existingIds = new Set(tasks.value.map((t) => t.id))
     let count = 0
-    for (const t of incomingTasks) {
-      if (existingIds.has(t.id)) continue
+    for (const task of incomingTasks) {
+      if (existingIds.has(task.id)) continue
       // 运行中的任务无法恢复轮询，标记为失败
-      if (t.status === 'running') {
-        t.status = 'failed'
-        t.error = t.error || '导入的任务无法恢复轮询'
+      if (task.status === 'running') {
+        task.status = 'failed'
+        task.error = task.error || '导入的任务无法恢复轮询'
       }
-      t.recoverable = false
-      await putTask(t)
-      tasks.value.push(t)
+      task.recoverable = false
+      await putTask(task)
+      tasks.value.push(task)
       count++
     }
     for (const a of data.assets ?? []) await putAsset(a)
@@ -629,7 +635,7 @@ export const useTasksStore = defineStore('tasks', () => {
 
   return {
     tasks,
-    initialized,
+    isInitialized,
     submitTask,
     executeTask,
     cancelTask,

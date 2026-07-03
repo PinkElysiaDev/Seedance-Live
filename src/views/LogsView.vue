@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full relative flex flex-col bg-ak-darker overflow-hidden">
+  <div class="h-full relative flex flex-col bg-ak-darker overflow-hidden mx-8">
     <!-- 刻印背景 -->
     <div class="absolute inset-0 bg-[url('/images/0FFFD6CE6535DD94DDA65146AFFD4F1E.png')] bg-cover bg-center opacity-[0.04] pointer-events-none mix-blend-screen"></div>
     <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-ak-darker/80 to-ak-darker pointer-events-none z-0"></div>
@@ -28,7 +28,7 @@
         <!-- 面板角标 -->
         <div class="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-ak-400/60 z-20 pointer-events-none"></div>
         <div class="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-ak-400/60 z-20 pointer-events-none"></div>
-        <LogPanel :show="true" @close="" class="w-full h-full" is-view />
+        <LogPanel :show="true" class="w-full h-full" is-view />
       </div>
     </div>
   </div>

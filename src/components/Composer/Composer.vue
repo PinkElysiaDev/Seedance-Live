@@ -5,7 +5,7 @@ import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
 import PromptArea from './PromptArea.vue'
-import { ingestFile } from '@/lib/asset'
+import { ingestFile, referenceRoleFromFile } from '@/lib/asset'
 import { validateTask, validateAssets } from '@/lib/validate'
 import type { AssetRole } from '@/types'
 
@@ -29,7 +29,7 @@ const validationErrors = computed(() => {
 })
 
 // 提示词为空：按钮置灰（仍可点击，点击时给报错）
-const promptEmpty = computed(() => !composer.prompt.trim())
+const isPromptEmpty = computed(() => !composer.prompt.trim())
 
 // 用户修改提示词后清除点击时产生的错误，避免残留
 watch(
@@ -39,7 +39,7 @@ watch(
 
 async function submit() {
   // 无提示词：弹 toast 警告 + 显示错误条，不提交
-  if (promptEmpty.value) {
+  if (isPromptEmpty.value) {
     toast.show('请输入提示词', 'error')
     submitErrors.value = validateTask(composer.params, composer.prompt, composer.assets)
     return
@@ -63,27 +63,12 @@ async function submit() {
   }
 }
 
-function inferRole(file: File): AssetRole | null {
-  const kind = roleKindFromMime(file.type)
-  if (kind === 'image') return 'referenceImage'
-  if (kind === 'video') return 'referenceVideo'
-  if (kind === 'audio') return 'referenceAudio'
-  return null
-}
-
-function roleKindFromMime(mime: string): 'image' | 'video' | 'audio' | null {
-  if (mime.startsWith('image/')) return 'image'
-  if (mime.startsWith('video/')) return 'video'
-  if (mime.startsWith('audio/')) return 'audio'
-  return null
-}
-
 async function onDrop(e: DragEvent) {
   const files = e.dataTransfer?.files
   if (!files || !files.length) return
   e.preventDefault()
   for (const file of Array.from(files)) {
-    const role = inferRole(file)
+    const role: AssetRole | null = referenceRoleFromFile(file)
     if (!role) continue
     try {
       const asset = await ingestFile(file, role)
@@ -116,13 +101,13 @@ function onDragOver(e: DragEvent) {
     <div class="relative">
       <button
         class="w-full relative h-16 bg-white text-ak-darker font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-ak-400 transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
-        :class="promptEmpty ? 'opacity-50 grayscale' : ''"
+        :class="isPromptEmpty ? 'opacity-50 grayscale' : ''"
         :disabled="tasks.tasks.some((t) => t.status === 'running')"
         @click="submit"
       >
         <div class="flex items-center gap-4 relative z-10">
           <!-- Progressing bars animation on hover -->
-          <div class="flex gap-1 group-hover:gap-2 transition-all">
+          <div class="flex gap-1 group-hover:gap-2 transition-[gap]">
             <div class="w-1 h-6 bg-ak-darker"></div>
             <div class="w-2 h-6 bg-ak-darker"></div>
             <div class="w-4 h-6 bg-ak-darker"></div>

@@ -121,7 +121,7 @@ function apply() {
 
       <div class="flex gap-1 border border-gray-800 bg-ak-dark p-1 w-fit">
         <button v-for="t in [{k:'text',l:'TEXT_INPUT'},{k:'image',l:'IMAGE_UPLOAD'},{k:'url',l:'DOC_URL'}]" :key="t.k"
-          class="px-4 py-1.5 font-mono text-[10px] transition-all"
+          class="px-4 py-1.5 font-mono text-[10px] transition"
           :class="mode === t.k ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'text-gray-500 hover:text-white'"
           @click="mode = t.k as typeof mode">> {{ t.l }}</button>
       </div>
@@ -143,7 +143,7 @@ function apply() {
         <p class="mt-1 font-mono text-[10px] text-gray-600">// 需在「代理」中启用代理才能跨域抓取；失败请改用粘贴内容或截图。</p>
       </div>
 
-      <button class="bg-white text-ak-darker font-mono font-bold text-xs px-6 py-2.5 hover:bg-ak-400 shadow-[0_0_10px_rgba(0,229,255,0.3)] transition-all disabled:opacity-50 disabled:grayscale" :disabled="loading" @click="parse">
+      <button class="bg-white text-ak-darker font-mono font-bold text-xs px-6 py-2.5 hover:bg-ak-400 shadow-[0_0_10px_rgba(0,229,255,0.3)] transition disabled:opacity-50 disabled:grayscale" :disabled="loading" @click="parse">
         {{ loading ? '> PROCESSING...' : '> INITIATE_PARSE' }}
       </button>
 

@@ -122,14 +122,14 @@ function selectInChain(id: string) {
 
         <!-- 选中态竖条：从右向左出现并移动到最左侧 -->
         <div
-          class="absolute top-0 bottom-0 w-1 bg-ak-400 transition-all duration-300 ease-out z-20"
+          class="absolute top-0 bottom-0 w-1 bg-ak-400 transition-[left,opacity] duration-300 ease-out z-20"
           :class="filter === f.value ? 'left-0 opacity-100' : 'left-full opacity-0'"
         ></div>
       </button>
 
       <!-- Back button style matching Arknights -->
       <button
-        class="group relative flex items-center justify-between w-full text-left py-3 px-4 mt-auto transition-all duration-300 bg-white hover:bg-gray-200"
+        class="group relative flex items-center justify-between w-full text-left py-3 px-4 mt-auto transition-colors duration-300 bg-white hover:bg-gray-200"
         @click="filter = 'all'; keyword = ''"
       >
         <div class="flex items-center gap-2">

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { AppSettings, CustomTemplate, ProviderProfile, ProxyConfig, SeedanceModel } from '@/types'
-import { genId } from '@/lib/id'
+import { generateId } from '@/lib/id'
 import { DEFAULT_POLL_INTERVAL_SEC } from '@/config/options'
 import { DEFAULT_CUSTOM_BODY } from '@/lib/template'
 
@@ -10,7 +10,7 @@ const STORAGE_KEY = 'seedance-live:settings'
 // 内置默认 seedance profile（火山方舟官方）
 export function createDefaultSeedanceProfile(): ProviderProfile {
   return {
-    id: genId(),
+    id: generateId(),
     name: '火山方舟官方',
     kind: 'seedance',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
@@ -22,7 +22,7 @@ export function createDefaultSeedanceProfile(): ProviderProfile {
 // 默认 custom profile：预置 3 字段 body 模板
 export function createDefaultCustomProfile(): ProviderProfile {
   return {
-    id: genId(),
+    id: generateId(),
     name: '自定义接口',
     kind: 'custom',
     baseUrl: '',

@@ -1,44 +1,26 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { computed } from 'vue'
 import type { VideoTask } from '@/types'
-import { useTasksStore } from '@/stores/tasks'
-import { useComposerStore } from '@/stores/composer'
-import { useToastStore } from '@/stores/toast'
 import { useTicker } from '@/composables/useTicker'
-import { MODEL_META } from '@/config/models'
-import { saveUrl } from '@/lib/download'
+import { useTaskMedia, useTaskActions } from '@/composables/useTaskItem'
+import { MODEL_META, ratioToPaddingTop } from '@/config/models'
 
 const props = defineProps<{ task: VideoTask }>()
 const emit = defineEmits<{ open: [] }>()
-const tasks = useTasksStore()
-const composer = useComposerStore()
-const toast = useToastStore()
-
-const coverUrl = ref<string | null>(null)
-const videoUrl = ref<string | null>(null)
 
 const isRunning = computed(
   () => props.task.status === 'running' || (props.task.status === 'failed' && props.task.recoverable),
 )
 const now = useTicker(() => isRunning.value)
 
+const { coverUrl, videoUrl } = useTaskMedia(() => props.task)
+const { download, retry, cancel, remove, continueFrame, reuseConfig } = useTaskActions(() => props.task, videoUrl)
+
 const elapsedSec = computed(() => {
   if (!props.task.createdAt) return 0
   const end = props.task.finishedAt ?? now.value
   return Math.max(0, Math.floor((end - props.task.createdAt) / 1000))
 })
-
-async function loadMedia() {
-  coverUrl.value = await tasks.resolveCoverUrl(props.task)
-  if (props.task.status === 'succeeded') {
-    videoUrl.value = await tasks.resolveVideoUrl(props.task)
-  } else {
-    videoUrl.value = null
-  }
-}
-
-watch(() => [props.task.status, props.task.videoBlobId, props.task.coverImageId], loadMedia, { immediate: false })
-onMounted(loadMedia)
 
 const statusText = computed(() => {
   switch (props.task.status) {
@@ -83,52 +65,7 @@ const statusColor = computed(() => {
 const modelLabel = computed(() => MODEL_META[props.task.params.model]?.label ?? props.task.params.model)
 
 // 基于请求比例计算 paddingTop，实现基于宽度的自适应高度
-const aspectRatioPadding = computed(() => {
-  const ratio = props.task.params.ratio || '16:9'
-  if (ratio === '16:9') return '56.25%'
-  if (ratio === '9:16') return '177.77%'
-  if (ratio === '1:1') return '100%'
-  if (ratio === '4:3') return '75%'
-  if (ratio === '3:4') return '133.33%'
-  if (ratio === '21:9') return '42.85%'
-  return '56.25%' // default fallback
-})
-
-async function download() {
-  if (videoUrl.value) {
-    const a = document.createElement('a')
-    a.href = videoUrl.value
-    a.download = `seedance-${props.task.id.slice(0, 8)}.mp4`
-    a.click()
-  } else if (props.task.videoUrl) {
-    await saveUrl(props.task.videoUrl, `seedance-${props.task.id.slice(0, 8)}.mp4`)
-  }
-}
-
-async function retry() {
-  await tasks.retryTask(props.task.id)
-  toast.show('已重新提交', 'success')
-}
-
-async function cancel() {
-  await tasks.cancelTask(props.task.id)
-}
-
-async function remove() {
-  await tasks.removeTask(props.task.id)
-}
-
-async function continueFrame() {
-  const res = await tasks.continueFromTask(props.task.id)
-  if (!res.ok) toast.show(res.error ?? '续帧失败', 'error')
-  else toast.show('已创建续帧任务', 'success')
-}
-
-function reuseConfig() {
-  composer.setPrompt(props.task.prompt)
-  composer.patchParams({ ...props.task.params })
-  toast.show('已载入配置到输入区', 'info')
-}
+const aspectRatioPadding = computed(() => ratioToPaddingTop(props.task.params.ratio || '16:9'))
 </script>
 
 <template>
@@ -151,10 +88,11 @@ function reuseConfig() {
           v-if="videoUrl && task.status === 'succeeded'"
           :src="videoUrl"
           controls
+          preload="metadata"
           class="h-full w-full object-cover relative z-10"
           @click.stop="emit('open')"
         />
-        <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity group-hover:scale-105 duration-700 relative z-10" />
+        <img v-else-if="coverUrl" :src="coverUrl" loading="lazy" class="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity group-hover:scale-105 duration-700 relative z-10" />
         <div v-else class="flex flex-col h-full items-center justify-center text-gray-600 font-sans tracking-widest relative z-10">
           <span class="text-xs uppercase">{{ isRunning ? 'PROCESSING...' : 'NO_VISUAL_DATA' }}</span>
         </div>
@@ -167,7 +105,7 @@ function reuseConfig() {
           <span class="text-right">{{ remoteHint }}</span>
         </div>
         <div v-if="estimatedProgress != null" class="mt-2 w-full bg-gray-800 h-1 relative overflow-hidden">
-          <div class="absolute top-0 left-0 h-full bg-ak-400 transition-all duration-300" :style="{ width: `${estimatedProgress}%` }"></div>
+          <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :style="{ width: `${estimatedProgress}%` }"></div>
         </div>
       </div>
 

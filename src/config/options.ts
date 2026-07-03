@@ -1,5 +1,4 @@
 import type { SeedanceModel, VideoParams } from '@/types'
-import { MODEL_META } from './models'
 
 export const DURATION_MIN = 4
 export const DURATION_MAX = 15
@@ -7,13 +6,13 @@ export const DURATION_MAX = 15
 export const PROMPT_MAX = 4000
 export const PROMPT_SUGGEST = 500
 
+/** 生成指定模型的默认渲染参数。默认分辨率统一为 720p（对所有模型合法）。 */
 export function defaultParams(model: SeedanceModel = 'doubao-seedance-2.0'): VideoParams {
-  const meta = MODEL_META[model]
   return {
     model,
     ratio: '16:9',
     duration: 5,
-    resolution: meta.maxResolution === '1080p' ? '720p' : '720p',
+    resolution: '720p',
     seed: undefined,
     generateAudio: false,
     watermark: false,

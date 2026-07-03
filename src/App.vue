@@ -4,12 +4,14 @@ import { useRoute } from 'vue-router'
 import { useTasksStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { useLogsStore } from '@/stores/logs'
+import { useComposerStore } from '@/stores/composer'
 import GlobalBackground from '@/components/common/GlobalBackground.vue'
 import Toast from '@/components/common/Toast.vue'
 
 const tasks = useTasksStore()
 const settings = useSettingsStore()
 const logs = useLogsStore()
+const composer = useComposerStore()
 const route = useRoute()
 
 // 布局用的首页标志：与路由解耦，仅在路由过渡"空档"（旧页已离场、新页未可见）切换。
@@ -21,7 +23,8 @@ function syncLayoutToRoute() {
 
 onMounted(async () => {
   logs.setVerbose(settings.settings.verboseLogs)
-  await tasks.initTasks()
+  // 并发：水合编辑器素材（刷新后恢复）+ 恢复未完成任务轮询
+  await Promise.all([composer.initAssets(), tasks.initTasks()])
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {})
   }
@@ -54,43 +57,43 @@ watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
         <div class="flex items-center gap-8">
           <router-link
             to="/"
-            class="group relative flex flex-col items-center justify-center font-sans font-bold text-sm tracking-[0.2em] transition-all duration-300 text-gray-400 hover:text-white uppercase"
+            class="group relative flex flex-col items-center justify-center w-28 font-sans font-bold text-sm tracking-[0.2em] transition-colors duration-300 text-gray-400 hover:text-white uppercase"
             active-class="!text-white"
           >
             <span>INDEX</span>
             <span class="text-[10px] text-gray-500 font-normal mt-0.5 group-hover:text-ak-400">首页</span>
             <!-- Active Indicator Underline -->
-            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-all duration-300 group-[.router-link-exact-active]:w-full"></div>
+            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-[width] duration-300 group-[.router-link-exact-active]:w-full"></div>
           </router-link>
 
           <router-link
             to="/history"
-            class="group relative flex flex-col items-center justify-center font-sans font-bold text-sm tracking-[0.2em] transition-all duration-300 text-gray-400 hover:text-white uppercase"
+            class="group relative flex flex-col items-center justify-center w-28 font-sans font-bold text-sm tracking-[0.2em] transition-colors duration-300 text-gray-400 hover:text-white uppercase"
             active-class="!text-white"
           >
             <span>ARCHIVE</span>
             <span class="text-[10px] text-gray-500 font-normal mt-0.5 group-hover:text-ak-400">历史</span>
-            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-all duration-300 group-[.router-link-exact-active]:w-full"></div>
+            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-[width] duration-300 group-[.router-link-exact-active]:w-full"></div>
           </router-link>
 
           <router-link
             to="/settings"
-            class="group relative flex flex-col items-center justify-center font-sans font-bold text-sm tracking-[0.2em] transition-all duration-300 text-gray-400 hover:text-white uppercase"
+            class="group relative flex flex-col items-center justify-center w-28 font-sans font-bold text-sm tracking-[0.2em] transition-colors duration-300 text-gray-400 hover:text-white uppercase"
             active-class="!text-white"
           >
             <span>SYSTEM</span>
             <span class="text-[10px] text-gray-500 font-normal mt-0.5 group-hover:text-ak-400">设置</span>
-            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-all duration-300 group-[.router-link-exact-active]:w-full"></div>
+            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-[width] duration-300 group-[.router-link-exact-active]:w-full"></div>
           </router-link>
 
           <router-link
             to="/logs"
-            class="group relative flex flex-col items-center justify-center font-sans font-bold text-sm tracking-[0.2em] transition-all duration-300 text-gray-400 hover:text-white uppercase"
+            class="group relative flex flex-col items-center justify-center w-28 font-sans font-bold text-sm tracking-[0.2em] transition-colors duration-300 text-gray-400 hover:text-white uppercase"
             active-class="!text-white"
           >
             <span>TERMINAL</span>
             <span class="text-[10px] text-gray-500 font-normal mt-0.5 group-hover:text-ak-400">终端</span>
-            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-all duration-300 group-[.router-link-exact-active]:w-full"></div>
+            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-0 bg-ak-400 transition-[width] duration-300 group-[.router-link-exact-active]:w-full"></div>
           </router-link>
         </div>
       </div>

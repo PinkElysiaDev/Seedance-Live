@@ -1,9 +1,5 @@
 // File/Blob/dataUrl/ArrayBuffer 互转 + 哈希
 
-export function fileToBlob(file: File): Blob {
-  return file
-}
-
 export function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
   return blob.arrayBuffer()
 }
@@ -12,7 +8,7 @@ export function arrayBufferToBlob(buffer: ArrayBuffer, mime: string): Blob {
   return new Blob([buffer], { type: mime })
 }
 
-// Blob → data:image/png;base64,xxxx
+/** Blob → data:<mime>;base64,xxxx。 */
 export function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -38,12 +34,15 @@ export function isAssetUrl(s: string): boolean {
   return typeof s === 'string' && s.startsWith('asset://')
 }
 
-// 公网 URL 或 asset:// 直传，无需转 dataUrl
+/** 公网 URL 或 asset:// 可直传，无需转 dataUrl。 */
 export function isDirectUrl(s: string): boolean {
   return isHttpUrl(s) || isAssetUrl(s)
 }
 
-// SHA-256 哈希，用于 blob 去重
+/**
+ * 计算 blob 的 SHA-256 哈希，用于 blob 去重。
+ * 不支持 subtle 时回退到 size+type 的粗略标识。
+ */
 export async function hashBlob(blob: Blob): Promise<string> {
   if (globalThis.crypto?.subtle) {
     const buf = await blob.arrayBuffer()

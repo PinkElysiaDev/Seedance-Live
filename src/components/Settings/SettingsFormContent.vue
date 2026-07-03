@@ -8,6 +8,7 @@ import { httpFetch, buildApiUrl } from '@/net/httpClient'
 import { TEMPLATE_VARS } from '@/lib/template'
 import { log } from '@/lib/logger'
 import AiConfigModal from './AiConfigModal.vue'
+import ToggleRow from './ToggleRow.vue'
 
 const props = defineProps<{ tab: 'provider' | 'proxy' | 'ai' | 'general' }>()
 const emit = defineEmits<{ close: [] }>()
@@ -18,7 +19,7 @@ const tasks = useTasksStore()
 const logs = useLogsStore()
 
 const profile = ref(settings.activeProfile)
-const showAiModal = ref(false)
+const isAiModalOpen = ref(false)
 
 const submitHeaders = computed<{ k: string; v: string }[]>(() => {
   const h = profile.value?.custom?.submitHeaders
@@ -33,7 +34,7 @@ function ensureProfileSync() {
   profile.value = settings.activeProfile
 }
 
-function patch(patch: Partial<NonNullable<typeof profile.value>>) {
+function patchProfile(patch: Partial<NonNullable<typeof profile.value>>) {
   if (!profile.value) return
   settings.upsertProfile({ ...profile.value, ...patch })
   ensureProfileSync()
@@ -130,6 +131,12 @@ function patchLlm(patch: Partial<NonNullable<typeof settings.settings.llmConfig>
   const cur = settings.settings.llmConfig ?? { baseUrl: '', apiKey: '', model: '' }
   settings.update({ llmConfig: { ...cur, ...patch } })
 }
+
+// verbose 开关需同时写设置与日志 store
+function toggleVerbose(enabled: boolean) {
+  settings.update({ verboseLogs: enabled })
+  logs.setVerbose(enabled)
+}
 async function testLlm() {
   const cfg = settings.settings.llmConfig
   if (!cfg?.baseUrl || !cfg?.apiKey || !cfg?.model) { toast.show('请填全 LLM 配置', 'error'); return }
@@ -151,7 +158,7 @@ async function testLlm() {
 }
 
 function onAiApplied() {
-  showAiModal.value = false
+  isAiModalOpen.value = false
   ensureProfileSync()
   toast.show('已应用 AI 解析结果，请检查后保存', 'success')
 }
@@ -201,7 +208,7 @@ async function onImportFile(e: Event) {
       <div class="flex flex-wrap items-center gap-3 bg-ak-dark border border-gray-800 p-3">
         <select
           :value="settings.activeProfile?.id"
-          class="flex-1 min-w-[200px] bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 outline-none focus:border-ak-400 focus:shadow-[0_0_8px_rgba(0,229,255,0.3)] transition-all"
+          class="flex-1 min-w-[200px] bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 outline-none focus:border-ak-400 focus:shadow-[0_0_8px_rgba(0,229,255,0.3)] transition"
           @change="selectProfile(($event.target as HTMLSelectElement).value)"
         >
           <option v-for="p in settings.settings.profiles" :key="p.id" :value="p.id" class="bg-ak-darker">{{ p.name }} [{{ p.kind === 'seedance' ? 'OFFICIAL' : 'CUSTOM' }}]</option>
@@ -215,28 +222,28 @@ async function onImportFile(e: Event) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <label class="block flex flex-col gap-2">
             <span class="text-xs font-mono text-ak-400 block tracking-wider">PROFILE_NAME //</span>
-            <input :value="profile.name" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patch({ name: ($event.target as HTMLInputElement).value })" />
+            <input :value="profile.name" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ name: ($event.target as HTMLInputElement).value })" />
           </label>
           <label class="block flex flex-col gap-2">
             <span class="text-xs font-mono text-ak-400 block tracking-wider">BASE_ENDPOINT_URL //</span>
-            <input :value="profile.baseUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patch({ baseUrl: ($event.target as HTMLInputElement).value })" />
+            <input :value="profile.baseUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ baseUrl: ($event.target as HTMLInputElement).value })" />
           </label>
           <label class="block md:col-span-2 flex flex-col gap-2">
             <span class="text-xs font-mono text-ak-400 block tracking-wider">AUTH_TOKEN (API_KEY) //</span>
-            <input :value="profile.apiKey" type="password" placeholder="Bearer token" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patch({ apiKey: ($event.target as HTMLInputElement).value })" />
+            <input :value="profile.apiKey" type="password" placeholder="Bearer token" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ apiKey: ($event.target as HTMLInputElement).value })" />
           </label>
           <label v-if="profile.kind === 'custom'" class="block md:col-span-2 flex flex-col gap-2">
             <span class="text-xs font-mono text-ak-400 block tracking-wider">MODEL_OVERRIDE //</span>
-            <input :value="profile.model" placeholder="e.g. doubao-seedance-1-0-pro-250528" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patch({ model: ($event.target as HTMLInputElement).value })" />
+            <input :value="profile.model" placeholder="e.g. doubao-seedance-1-0-pro-250528" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ model: ($event.target as HTMLInputElement).value })" />
           </label>
         </div>
 
         <div class="flex flex-wrap items-center gap-4 pt-6 border-t border-gray-800 mt-6">
-          <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition-all flex items-center group" @click.prevent="testConnection">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-all duration-300"></span>
+          <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group" @click.prevent="testConnection">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
             INITIATE_TEST_SEQ
           </button>
-          <button v-if="profile.kind === 'custom'" class="relative border border-ak-400/50 bg-ak-400/10 text-ak-400 font-mono text-sm pl-10 pr-6 py-2.5 hover:bg-ak-400 hover:text-ak-darker transition-colors flex items-center group" @click.prevent="showAiModal = true">
+          <button v-if="profile.kind === 'custom'" class="relative border border-ak-400/50 bg-ak-400/10 text-ak-400 font-mono text-sm pl-10 pr-6 py-2.5 hover:bg-ak-400 hover:text-ak-darker transition-colors flex items-center group" @click.prevent="isAiModalOpen = true">
             <span class="absolute left-4 top-1/2 -translate-y-1/2 animate-pulse">✨</span>
             AI_PARSE_DOCS
           </button>
@@ -356,21 +363,14 @@ async function onImportFile(e: Event) {
 
     <!-- 代理 -->
     <div v-else-if="props.tab === 'proxy'" class="space-y-6 max-w-2xl">
-      <div
-        class="flex items-center justify-between p-4 md:p-6 cursor-pointer transition-all duration-300 border border-gray-800 bg-ak-dark/50 hover:border-ak-400/50"
-        @click="settings.setProxy({ enabled: !settings.proxy.enabled })"
-      >
-        <div class="flex flex-col gap-1">
-          <span class="font-sans italic font-bold text-lg tracking-widest uppercase" :class="settings.proxy.enabled ? 'text-ak-400' : 'text-gray-500'">ENABLE_PROXY_ROUTING</span>
-          <span class="font-mono text-[10px] text-gray-500">SYS.NET.PROXY_OVERRIDE</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="font-sans text-xs tracking-wider font-bold" :class="settings.proxy.enabled ? 'text-ak-400' : 'text-gray-500'">
-            {{ settings.proxy.enabled ? '[ ACTIVE ]' : '[ INACTIVE ]' }}
-          </span>
-          <div class="w-1.5 h-4 bg-ak-400 transition-all duration-300" :class="settings.proxy.enabled ? 'opacity-100 shadow-[0_0_8px_#00E5FF]' : 'opacity-20'"></div>
-        </div>
-      </div>
+      <ToggleRow
+        label="ENABLE_PROXY_ROUTING"
+        hint="SYS.NET.PROXY_OVERRIDE"
+        label-class="text-lg"
+        inactive-class="text-gray-500"
+        :model-value="settings.proxy.enabled"
+        @update:model-value="settings.setProxy({ enabled: $event })"
+      />
 
       <div class="bg-ak-dark/30 p-4 border-l-2 border-gray-800">
         <p class="font-mono text-xs text-gray-400 leading-relaxed">
@@ -381,19 +381,19 @@ async function onImportFile(e: Event) {
       <div class="space-y-6 p-6 bg-ak-dark/50 border border-gray-800">
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-ak-400 tracking-wider">PROXY_ENDPOINT_URL //</span>
-          <input :value="settings.proxy.url" placeholder="https://your-proxy.workers.dev" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="settings.setProxy({ url: ($event.target as HTMLInputElement).value })" />
+          <input :value="settings.proxy.url" placeholder="https://your-proxy.workers.dev" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="settings.setProxy({ url: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-ak-400 tracking-wider">REWRITE_STRATEGY //</span>
-          <select :value="settings.proxy.mode" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 outline-none transition-all" @change="settings.setProxy({ mode: ($event.target as HTMLSelectElement).value as 'path' | 'query' })">
+          <select :value="settings.proxy.mode" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 outline-none transition" @change="settings.setProxy({ mode: ($event.target as HTMLSelectElement).value as 'path' | 'query' })">
             <option value="query" class="bg-ak-darker">QUERY_PARAM (?target=URL)</option>
             <option value="path" class="bg-ak-darker">PATH_APPEND (/URL)</option>
           </select>
         </div>
       </div>
 
-      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition-all flex items-center group mt-4" @click="testProxy">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-all duration-300"></span>
+      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group mt-4" @click="testProxy">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
         APPLY_PROXY_CFG
       </button>
     </div>
@@ -410,39 +410,30 @@ async function onImportFile(e: Event) {
       <div class="space-y-6 p-6 bg-ak-dark/50 border border-gray-800">
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-ak-400 tracking-wider">LLM_BASE_URL //</span>
-          <input :value="settings.settings.llmConfig?.baseUrl ?? ''" placeholder="https://api.openai.com/v1" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patchLlm({ baseUrl: ($event.target as HTMLInputElement).value })" />
+          <input :value="settings.settings.llmConfig?.baseUrl ?? ''" placeholder="https://api.openai.com/v1" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchLlm({ baseUrl: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-ak-400 tracking-wider">AUTH_TOKEN (API_KEY) //</span>
-          <input :value="settings.settings.llmConfig?.apiKey ?? ''" type="password" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patchLlm({ apiKey: ($event.target as HTMLInputElement).value })" />
+          <input :value="settings.settings.llmConfig?.apiKey ?? ''" type="password" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchLlm({ apiKey: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-ak-400 tracking-wider">MODEL_ID (Requires Vision) //</span>
-          <input :value="settings.settings.llmConfig?.model ?? ''" placeholder="gpt-4o / glm-4v" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-all" @input="patchLlm({ model: ($event.target as HTMLInputElement).value })" />
+          <input :value="settings.settings.llmConfig?.model ?? ''" placeholder="gpt-4o / glm-4v" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchLlm({ model: ($event.target as HTMLInputElement).value })" />
         </div>
       </div>
 
-      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition-all flex items-center group" @click.prevent="testLlm">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-all duration-300"></span>
+      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group" @click.prevent="testLlm">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
         TEST_LLM_LINK
       </button>
 
       <div class="pt-6 mt-6 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-ak-400/30 before:to-transparent">
-        <div
-          class="flex items-center justify-between p-4 md:p-6 cursor-pointer transition-all duration-300 border border-gray-800 bg-ak-dark/50 hover:border-ak-400/50"
-          @click="settings.update({ verboseLogs: !settings.settings.verboseLogs }); logs.setVerbose(!settings.settings.verboseLogs)"
-        >
-          <div class="flex flex-col gap-1">
-            <span class="font-sans italic font-bold text-sm tracking-widest uppercase" :class="settings.settings.verboseLogs ? 'text-ak-400' : 'text-gray-400'">VERBOSE_LOGGING</span>
-            <span class="font-mono text-[10px] text-gray-500">关闭后仅记录 warn/error 级别日志</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-sans text-xs tracking-wider font-bold" :class="settings.settings.verboseLogs ? 'text-ak-400' : 'text-gray-500'">
-              {{ settings.settings.verboseLogs ? '[ ACTIVE ]' : '[ INACTIVE ]' }}
-            </span>
-            <div class="w-1.5 h-4 bg-ak-400 transition-all duration-300" :class="settings.settings.verboseLogs ? 'opacity-100 shadow-[0_0_8px_#00E5FF]' : 'opacity-20'"></div>
-          </div>
-        </div>
+        <ToggleRow
+          label="VERBOSE_LOGGING"
+          hint="关闭后仅记录 warn/error 级别日志"
+          :model-value="settings.settings.verboseLogs"
+          @update:model-value="toggleVerbose"
+        />
       </div>
     </div>
 
@@ -450,37 +441,19 @@ async function onImportFile(e: Event) {
     <div v-else class="space-y-6 max-w-2xl">
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div
-          class="flex items-center justify-between p-4 md:p-6 cursor-pointer transition-all duration-300 border border-gray-800 bg-ak-dark/50 hover:border-ak-400/50"
-          @click="settings.update({ clearComposerAfterSubmit: !settings.settings.clearComposerAfterSubmit })"
-        >
-          <div class="flex flex-col gap-1">
-             <span class="font-sans italic font-bold text-sm tracking-widest uppercase" :class="settings.settings.clearComposerAfterSubmit ? 'text-ak-400' : 'text-gray-400'">AUTO_CLEAR_INPUT</span>
-             <span class="font-mono text-[10px] text-gray-500">提交后自动清空编辑器内容</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-sans text-xs tracking-wider font-bold" :class="settings.settings.clearComposerAfterSubmit ? 'text-ak-400' : 'text-gray-500'">
-              {{ settings.settings.clearComposerAfterSubmit ? '[ ACTIVE ]' : '[ INACTIVE ]' }}
-            </span>
-            <div class="w-1.5 h-4 bg-ak-400 transition-all duration-300" :class="settings.settings.clearComposerAfterSubmit ? 'opacity-100 shadow-[0_0_8px_#00E5FF]' : 'opacity-20'"></div>
-          </div>
-        </div>
+        <ToggleRow
+          label="AUTO_CLEAR_INPUT"
+          hint="提交后自动清空编辑器内容"
+          :model-value="settings.settings.clearComposerAfterSubmit"
+          @update:model-value="settings.update({ clearComposerAfterSubmit: $event })"
+        />
 
-        <div
-          class="flex items-center justify-between p-4 md:p-6 cursor-pointer transition-all duration-300 border border-gray-800 bg-ak-dark/50 hover:border-ak-400/50"
-          @click="settings.update({ notifyOnComplete: !settings.settings.notifyOnComplete })"
-        >
-          <div class="flex flex-col gap-1">
-             <span class="font-sans italic font-bold text-sm tracking-widest uppercase" :class="settings.settings.notifyOnComplete ? 'text-ak-400' : 'text-gray-400'">DESKTOP_NOTIFY</span>
-             <span class="font-mono text-[10px] text-gray-500">任务完成时发送系统通知</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-sans text-xs tracking-wider font-bold" :class="settings.settings.notifyOnComplete ? 'text-ak-400' : 'text-gray-500'">
-              {{ settings.settings.notifyOnComplete ? '[ ACTIVE ]' : '[ INACTIVE ]' }}
-            </span>
-            <div class="w-1.5 h-4 bg-ak-400 transition-all duration-300" :class="settings.settings.notifyOnComplete ? 'opacity-100 shadow-[0_0_8px_#00E5FF]' : 'opacity-20'"></div>
-          </div>
-        </div>
+        <ToggleRow
+          label="DESKTOP_NOTIFY"
+          hint="任务完成时发送系统通知"
+          :model-value="settings.settings.notifyOnComplete"
+          @update:model-value="settings.update({ notifyOnComplete: $event })"
+        />
       </div>
 
       <div class="space-y-6 p-6 bg-ak-dark/50 border border-gray-800">
@@ -512,15 +485,15 @@ async function onImportFile(e: Event) {
         </p>
 
         <div class="flex flex-wrap gap-4">
-          <button class="flex-1 min-w-[140px] bg-ak-dark border border-gray-800 text-gray-300 hover:border-ak-400 hover:text-ak-400 hover:bg-ak-darker font-mono text-sm px-4 py-3 transition-all duration-300 flex flex-col items-center gap-1 group" @click="exportData">
+          <button class="flex-1 min-w-[140px] bg-ak-dark border border-gray-800 text-gray-300 hover:border-ak-400 hover:text-ak-400 hover:bg-ak-darker font-mono text-sm px-4 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="exportData">
             <span class="text-lg group-hover:-translate-y-1 transition-transform">↓</span>
             EXPORT_DB
           </button>
-          <button class="flex-1 min-w-[140px] bg-ak-dark border border-gray-800 text-gray-300 hover:border-ak-400 hover:text-ak-400 hover:bg-ak-darker font-mono text-sm px-4 py-3 transition-all duration-300 flex flex-col items-center gap-1 group" @click="importData">
+          <button class="flex-1 min-w-[140px] bg-ak-dark border border-gray-800 text-gray-300 hover:border-ak-400 hover:text-ak-400 hover:bg-ak-darker font-mono text-sm px-4 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="importData">
             <span class="text-lg group-hover:-translate-y-1 transition-transform">↑</span>
             IMPORT_DB
           </button>
-          <button class="w-full md:w-auto bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white font-mono text-sm px-6 py-3 transition-all duration-300 flex flex-col items-center gap-1 group" @click="clearAllTasks">
+          <button class="w-full md:w-auto bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white font-mono text-sm px-6 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="clearAllTasks">
             <span class="text-lg group-hover:scale-110 transition-transform">⚠</span>
             PURGE_ALL_TASKS
           </button>
@@ -529,6 +502,6 @@ async function onImportFile(e: Event) {
       </div>
     </div>
 
-    <AiConfigModal :show="showAiModal" @close="showAiModal = false" @applied="onAiApplied" />
+    <AiConfigModal :show="isAiModalOpen" @close="isAiModalOpen = false" @applied="onAiApplied" />
   </div>
 </template>
