@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useLogsStore } from '@/stores/logs'
 import GlobalBackground from '@/components/common/GlobalBackground.vue'
 import Toast from '@/components/common/Toast.vue'
+import { publicAsset } from '@/lib/publicAsset'
 
 const tasks = useTasksStore()
 const settings = useSettingsStore()
@@ -42,7 +43,7 @@ watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
       <div class="mx-auto flex max-w-7xl items-center justify-between px-8">
         <!-- Logo Area：所有页面常驻显示，位置不动 -->
         <div class="flex items-center gap-4 opacity-90">
-          <img src="/images/E2EDDC5F82A3F30CBEC89604BC9C5945.png" class="logo-glow h-10 w-auto object-contain" alt="Logo" />
+          <img :src="publicAsset('images/E2EDDC5F82A3F30CBEC89604BC9C5945.png')" class="logo-glow h-10 w-auto object-contain" alt="Logo" />
           <div class="flex flex-col">
             <span class="font-sans font-black text-2xl tracking-widest text-white uppercase leading-none">
               SEEDANCE <span class="text-ak-400 font-light">LIVE</span>

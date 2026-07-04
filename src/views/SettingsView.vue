@@ -23,7 +23,7 @@
             @click="expandPillar('provider')"
           >
             <!-- Stylized Image Background -->
-            <div class="absolute inset-0 bg-[url('/images/8D0EE95EEACC026829ACA09CFC2CBDA2.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+            <div class="absolute inset-0 bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]" :style="{ backgroundImage: `url(${publicAsset('images/8D0EE95EEACC026829ACA09CFC2CBDA2.png')})` }"></div>
             <!-- Cyan accent line -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
@@ -39,7 +39,7 @@
             class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('proxy')"
           >
-             <div class="absolute inset-0 bg-[url('/images/751D9D83F676527556FFD8943753D774.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+             <div class="absolute inset-0 bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]" :style="{ backgroundImage: `url(${publicAsset('images/751D9D83F676527556FFD8943753D774.png')})` }"></div>
              <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
              <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
@@ -54,7 +54,7 @@
             class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('ai')"
           >
-             <div class="absolute inset-0 bg-[url('/images/6C6896C912242C8931465D5AAE86C055.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+             <div class="absolute inset-0 bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]" :style="{ backgroundImage: `url(${publicAsset('images/6C6896C912242C8931465D5AAE86C055.png')})` }"></div>
              <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
              <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
@@ -69,7 +69,7 @@
             class="flex-1 min-w-[280px] group cursor-pointer snap-center relative border-l border-r border-ak-darker hover:border-ak-400/50 transition-[background-color,border-color,transform] duration-700 flex flex-col bg-ak-dark/60 backdrop-blur-md hover:bg-ak-gray hover:-translate-y-2 overflow-hidden animate-[pillar-in_0.6s_cubic-bezier(0.25,1,0.2,1)_both] will-change-[backdrop-filter]"
             @click="expandPillar('general')"
           >
-             <div class="absolute inset-0 bg-[url('/images/8370D828038E08C64EBE4339BC8B2DCB.png')] bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]"></div>
+             <div class="absolute inset-0 bg-cover bg-center opacity-[0.05] group-hover:opacity-40 group-hover:brightness-125 transition-[opacity,transform,filter] duration-700 ease-out mix-blend-screen scale-[1.08] group-hover:scale-100 filter group-hover:drop-shadow-[0_0_20px_#B2EBF2]" :style="{ backgroundImage: `url(${publicAsset('images/8370D828038E08C64EBE4339BC8B2DCB.png')})` }"></div>
              <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-ak-400/0 via-ak-400/80 to-ak-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
              <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
@@ -84,7 +84,7 @@
         <div v-else class="absolute inset-0 animate-[fade-in_0.4s_cubic-bezier(0.25,1,0.2,1)] flex flex-col bg-ak-dark/95 backdrop-blur-md border border-ak-400/20 overflow-hidden mx-8">
 
           <!-- Large Decorative Background for Form -->
-          <div class="absolute right-0 top-0 w-1/2 h-full bg-[url('/images/E2EDDC5F82A3F30CBEC89604BC9C5945.png')] bg-contain bg-right-bottom bg-no-repeat opacity-[0.02] pointer-events-none"></div>
+          <div class="absolute right-0 top-0 w-1/2 h-full bg-contain bg-right-bottom bg-no-repeat opacity-[0.02] pointer-events-none" :style="{ backgroundImage: `url(${publicAsset('images/E2EDDC5F82A3F30CBEC89604BC9C5945.png')})` }"></div>
 
           <!-- Header Bar -->
           <div class="flex items-center justify-between p-6 border-b border-ak-400/20">
@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import SettingsFormContent from '@/components/Settings/SettingsFormContent.vue'
+import { publicAsset } from '@/lib/publicAsset'
 
 const expandedPillar = ref<'provider' | 'proxy' | 'ai' | 'general' | null>(null)
 

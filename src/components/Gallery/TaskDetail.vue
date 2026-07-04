@@ -8,6 +8,7 @@ import Modal from '@/components/common/Modal.vue'
 import TaskChain from './TaskChain.vue'
 import { MODEL_META } from '@/config/models'
 import { saveUrl } from '@/lib/download'
+import { publicAsset } from '@/lib/publicAsset'
 
 const props = defineProps<{ show: boolean; taskId: string | null }>()
 const emit = defineEmits<{ close: []; select: [id: string] }>()
@@ -107,7 +108,7 @@ function onSelectChain(id: string) {
     <div v-if="task" class="space-y-6">
       <!-- 视频播放 -->
       <div class="aspect-video w-full overflow-hidden border border-gray-700 bg-ak-darker relative group shadow-lg">
-        <div class="absolute inset-0 bg-[url('/images/0045A6E438A50352E2AF924005AC8CD6.png')] bg-cover bg-center mix-blend-screen opacity-10 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-cover bg-center mix-blend-screen opacity-10 pointer-events-none" :style="{ backgroundImage: `url(${publicAsset('images/0045A6E438A50352E2AF924005AC8CD6.png')})` }"></div>
         <video v-if="videoUrl" :src="videoUrl" controls autoplay class="h-full w-full object-contain relative z-10" />
         <img v-else-if="coverUrl" :src="coverUrl" class="h-full w-full object-contain opacity-60 relative z-10" />
         <div v-else class="flex flex-col h-full items-center justify-center text-gray-700 font-sans font-black text-2xl tracking-widest relative z-10 uppercase">

@@ -1,7 +1,7 @@
 <template>
   <div class="h-full relative flex flex-col bg-ak-darker overflow-hidden">
     <!-- 刻印背景 -->
-    <div class="absolute inset-0 bg-[url('/images/0FFFD6CE6535DD94DDA65146AFFD4F1E.png')] bg-cover bg-center opacity-[0.04] pointer-events-none mix-blend-screen"></div>
+    <div class="absolute inset-0 bg-cover bg-center opacity-[0.04] pointer-events-none mix-blend-screen" :style="{ backgroundImage: `url(${publicAsset('images/0FFFD6CE6535DD94DDA65146AFFD4F1E.png')})` }"></div>
     <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-ak-darker/80 to-ak-darker pointer-events-none z-0"></div>
 
     <!-- 右侧竖排大字装饰 -->
@@ -36,4 +36,5 @@
 
 <script setup lang="ts">
 import LogPanel from '@/components/common/LogPanel.vue'
+import { publicAsset } from '@/lib/publicAsset'
 </script>
