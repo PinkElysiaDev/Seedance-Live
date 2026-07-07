@@ -2,6 +2,7 @@ import type { ProviderProfile, ProxyConfig, VideoParams } from '@/types'
 import { httpFetch, buildApiUrl } from '@/net/httpClient'
 import { buildSeedancePayload } from './seedancePayload'
 import { log } from '@/lib/logger'
+import { useI18nStore } from '@/stores/i18n'
 import type { PollResult, SubmitContext, VideoProvider } from './types'
 
 // 火山 Seedance 响应里的任务对象
@@ -15,14 +16,15 @@ interface SeedanceTask {
 
 // 从提交响应里取 task id（兼容多种包装）
 function extractTaskId(payload: unknown): string {
-  if (payload == null) throw new Error('提交响应为空')
+  const { t } = useI18nStore()
+  if (payload == null) throw new Error(t('error.emptySubmitResponse'))
   const obj = payload as Record<string, unknown>
   const direct = (obj.id ?? obj.task_id) as string | undefined
   if (direct) return direct
   const inner = (obj.data ?? obj.result) as Record<string, unknown> | undefined
   const innerId = inner ? ((inner.id ?? inner.task_id) as string | undefined) : undefined
   if (innerId) return innerId
-  throw new Error('提交响应未包含任务 ID')
+  throw new Error(t('error.noTaskIdInResponse'))
 }
 
 function parseTask(payload: unknown): SeedanceTask {
@@ -42,12 +44,13 @@ function authHeaders(profile: ProviderProfile, json = true): Record<string, stri
 
 export const seedanceProvider: VideoProvider = {
   async submit(ctx: SubmitContext): Promise<{ remoteTaskId: string }> {
+    const { t } = useI18nStore()
     const { task, assets, profile, proxy, signal } = ctx
     // model 覆盖：profile.model 优先
     const effectiveParams = { ...task.params, model: (profile.model || task.params.model) as VideoParams['model'] }
     const payload = await buildSeedancePayload(effectiveParams, task.prompt, assets)
     const url = buildApiUrl(profile.baseUrl, '/contents/generations/tasks')
-    log.info('submit', `提交火山原生任务 → ${url}`, { model: effectiveParams.model, prompt: task.prompt.slice(0, 80) }, task.id)
+    log.info('submit', t('log.submitVolcano', { url }), { model: effectiveParams.model, prompt: task.prompt.slice(0, 80) }, task.id)
     const res = await httpFetch<unknown>(url, {
       method: 'POST',
       headers: authHeaders(profile),
@@ -58,9 +61,9 @@ export const seedanceProvider: VideoProvider = {
       logCategory: 'submit',
       taskId: task.id,
     })
-    log.debug('submit', '提交原始响应', res, task.id)
+    log.debug('submit', t('log.rawSubmitResponse'), res, task.id)
     const remoteTaskId = extractTaskId(res)
-    log.info('submit', `已入队 taskId=${remoteTaskId}`, undefined, task.id)
+    log.info('submit', t('log.enqueuedLocal', { id: remoteTaskId }), undefined, task.id)
     ctx.onEnqueued(remoteTaskId)
     return { remoteTaskId }
   },
@@ -71,6 +74,7 @@ export const seedanceProvider: VideoProvider = {
     signal: AbortSignal,
     proxy?: ProxyConfig,
   ): Promise<PollResult> {
+    const { t } = useI18nStore()
     const url = buildApiUrl(profile.baseUrl, `/contents/generations/tasks/${encodeURIComponent(remoteTaskId)}`)
     const res = await httpFetch<unknown>(url, {
       method: 'GET',
@@ -80,16 +84,16 @@ export const seedanceProvider: VideoProvider = {
       proxy,
       logCategory: 'poll',
     })
-    log.debug('poll', '轮询原始响应', res)
+    log.debug('poll', t('log.rawPollResponse'), res)
     const task = parseTask(res)
     const status = (task.status ?? '').toLowerCase()
     if (status === 'succeeded') {
       const videoUrl = task.content?.video_url
       if (!videoUrl) {
-        log.error('poll', '任务成功但未返回视频 URL', res)
-        return { status: 'failed', error: '任务成功但未返回视频 URL' }
+        log.error('poll', t('error.noVideoUrl'), res)
+        return { status: 'failed', error: t('error.noVideoUrl') }
       }
-      log.info('poll', `任务成功 videoUrl=${videoUrl.slice(0, 80)}`, undefined)
+      log.info('poll', t('log.successVideoUrl', { url: videoUrl.slice(0, 80) }), undefined)
       return {
         status: 'succeeded',
         videoUrl,
@@ -97,8 +101,8 @@ export const seedanceProvider: VideoProvider = {
       }
     }
     if (status === 'failed' || status === 'cancelled' || status === 'expired') {
-      log.warn('poll', `任务${status}`, { error: task.error?.message })
-      return { status: status as PollResult['status'], error: task.error?.message || `视频生成${status}` }
+      log.warn('poll', t('log.taskStatus', { status }), { error: task.error?.message })
+      return { status: status as PollResult['status'], error: task.error?.message || t('error.genFailed', { status }) }
     }
     // queued / running / 未知
     return { status: 'running' }

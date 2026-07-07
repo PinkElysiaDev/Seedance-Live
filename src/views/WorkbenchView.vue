@@ -10,13 +10,15 @@
 
       <!-- Top: Provider Selector Dropdown -->
       <div class="provider-dropdown-root mb-8 border-b border-gray-700 pb-4 relative">
-        <div class="font-sans font-bold text-gray-500 tracking-widest text-xs mb-1 uppercase">CURRENT_PROVIDER</div>
+        <div class="font-sans font-bold text-gray-500 tracking-widest text-xs mb-1 uppercase">{{ t('wb.currentProvider') }}</div>
         <div
           class="flex items-center justify-between group cursor-pointer hover:text-ak-400 transition-colors"
           @click="isProviderOpen = !isProviderOpen"
         >
           <span class="font-sans font-black text-white text-xl tracking-wider group-hover:text-ak-400 transition-colors uppercase truncate">
-            {{ activeProfile?.name || 'NO_PROVIDER' }} // <span class="font-mono font-normal text-xs text-gray-500 group-hover:text-ak-400/80 transition-colors normal-case tracking-normal">{{ modelLabel }}</span>
+            <template v-if="activeProfile">{{ activeProfile.name }}</template>
+            <template v-else>{{ noProvider ? 'NO_PROVIDER' : '' }}</template>
+            // <span class="font-mono font-normal text-xs text-gray-500 group-hover:text-ak-400/80 transition-colors normal-case tracking-normal">{{ modelLabel }}</span>
           </span>
           <span class="font-mono text-gray-500 transition-transform" :class="{ 'rotate-180': isProviderOpen }">▼</span>
         </div>
@@ -27,7 +29,7 @@
           class="absolute left-0 right-0 top-full mt-2 z-30 bg-ak-dark border border-gray-700 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
         >
           <div class="px-4 py-2 font-sans font-bold text-gray-500 tracking-widest text-[10px] uppercase border-b border-gray-800">
-            SELECT_PROVIDER
+            {{ t('wb.selectProvider') }}
           </div>
           <button
             v-for="p in settings.settings.profiles"
@@ -42,13 +44,13 @@
             </span>
             <span v-if="p.id === activeProfile?.id" class="font-mono text-ak-400 ml-2">●</span>
           </button>
-          <div v-if="!settings.settings.profiles.length" class="px-4 py-3 text-gray-600 font-mono text-xs">NO_PROVIDERS_CONFIGURED</div>
+          <div v-if="!settings.settings.profiles.length" class="px-4 py-3 text-gray-600 font-mono text-xs">{{ t('wb.noProvidersConfigured') }}</div>
           <router-link
             to="/settings"
             class="block px-4 py-3 border-t border-gray-800 font-sans font-bold text-[10px] tracking-widest uppercase text-gray-400 hover:text-ak-400 transition-colors"
             @click="isProviderOpen = false"
           >
-            + CONFIGURE_PROVIDERS
+            + {{ t('wb.configureProviders') }}
           </router-link>
         </div>
       </div>
@@ -60,21 +62,21 @@
       <div class="mt-8 space-y-6">
 
         <div class="flex flex-col gap-2">
-           <div class="font-sans font-bold text-gray-500 tracking-widest text-xs uppercase">RENDER_MODE</div>
+           <div class="font-sans font-bold text-gray-500 tracking-widest text-xs uppercase">{{ t('wb.renderMode') }}</div>
            <div class="flex bg-ak-gray p-1 w-full gap-1">
              <button
                class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-colors"
                :class="activeMode === 'REF_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
                @click="composer.setActiveMode('REF_MODE')"
              >
-               REFERENCE
+               {{ t('wb.modeReference') }}
              </button>
              <button
                class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-colors"
                :class="activeMode === 'KEYFRAME_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
                @click="composer.setActiveMode('KEYFRAME_MODE')"
              >
-               KEYFRAME
+               {{ t('wb.modeKeyframe') }}
              </button>
            </div>
         </div>
@@ -103,25 +105,25 @@
           <div v-if="!isRunning" class="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 p-8">
             <div class="w-16 h-1 bg-ak-400 mb-6"></div>
             <h2 class="font-sans font-black text-4xl text-white tracking-widest uppercase mb-4 text-center drop-shadow-md">
-              WAITING_FOR_DATA
+              {{ t('wb.waitingForData') }}
             </h2>
             <div class="flex gap-4 font-mono text-sm text-gray-400">
-              <span class="bg-ak-gray px-2 py-1">MODE: {{ activeMode }}</span>
-              <span class="bg-ak-gray px-2 py-1">RATIO: {{ composer.params.ratio }}</span>
-              <span class="bg-ak-gray px-2 py-1">RES: {{ composer.params.resolution }}</span>
-              <span class="bg-ak-gray px-2 py-1">DURATION: {{ composer.params.duration }}s</span>
+              <span class="bg-ak-gray px-2 py-1">{{ t('wb.mode') }}: {{ modeLabel }}</span>
+              <span class="bg-ak-gray px-2 py-1">{{ t('wb.ratio') }}: {{ composer.params.ratio }}</span>
+              <span class="bg-ak-gray px-2 py-1">{{ t('wb.res') }}: {{ composer.params.resolution }}</span>
+              <span class="bg-ak-gray px-2 py-1">{{ t('wb.duration') }}: {{ composer.params.duration }}s</span>
             </div>
 
             <!-- 按需展示：仅当用户配置了对应项才出现 -->
             <div v-if="hasOptionalParams" class="mt-3 flex flex-wrap gap-4 font-mono text-sm text-gray-400 justify-center">
-              <span v-if="composer.params.generateAudio" class="bg-ak-gray px-2 py-1">AUDIO_GEN</span>
-              <span v-if="composer.params.returnLastFrame" class="bg-ak-gray px-2 py-1">LAST_FRAME</span>
-              <span v-if="composer.params.watermark" class="bg-ak-gray px-2 py-1">WATERMARK</span>
-              <span v-if="composer.params.seed != null" class="bg-ak-gray px-2 py-1">RAND_SEED: {{ composer.params.seed }}</span>
+              <span v-if="composer.params.generateAudio" class="bg-ak-gray px-2 py-1">{{ t('wb.audioGen') }}</span>
+              <span v-if="composer.params.returnLastFrame" class="bg-ak-gray px-2 py-1">{{ t('wb.lastFrame') }}</span>
+              <span v-if="composer.params.watermark" class="bg-ak-gray px-2 py-1">{{ t('wb.watermark') }}</span>
+              <span v-if="composer.params.seed != null" class="bg-ak-gray px-2 py-1">{{ t('wb.randSeed') }}: {{ composer.params.seed }}</span>
             </div>
 
             <div class="absolute bottom-6 left-6 font-sans text-xs text-gray-600 tracking-widest">
-              [[ SYSTEM STANDBY ]]
+              [[ System Standby ]]
             </div>
           </div>
 
@@ -133,7 +135,7 @@
               <div class="absolute inset-4 border border-ak-400 rounded-full border-t-transparent animate-spin"></div>
               <div class="font-sans font-black text-ak-400 text-xl tracking-widest">PROG</div>
             </div>
-            <div class="font-mono text-white tracking-widest text-sm">SYNCHRONIZING CORE...</div>
+            <div class="font-mono text-white tracking-widest text-sm">{{ t('wb.synchronizingCore') }}</div>
           </div>
         </div>
 
@@ -151,17 +153,25 @@ import { useComposerStore } from '@/stores/composer'
 import { storeToRefs } from 'pinia'
 import { useTasksStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
+import { useI18nStore } from '@/stores/i18n'
 import { MODEL_META } from '@/config/models'
 import type { SeedanceModel } from '@/types'
 
 const composer = useComposerStore()
 const tasksStore = useTasksStore()
 const settings = useSettingsStore()
+const { t } = useI18nStore()
 
 // 渲染模式持久化在 composer store，跨页面保留；用 storeToRefs 保持响应式
 const { activeMode } = storeToRefs(composer)
 
 const isRunning = computed(() => tasksStore.tasks.some(t => t.status === 'running'))
+
+// 渲染模式显示名（内部值 REF_MODE/KEYFRAME_MODE → 本地化文案）
+const modeLabel = computed(() =>
+  activeMode.value === 'KEYFRAME_MODE' ? t('wb.modeKeyframe') : t('wb.modeReference'),
+)
+const noProvider = computed(() => activeProfile.value == null)
 
 // 当前渠道商与切换
 const activeProfile = computed(() => settings.activeProfile)

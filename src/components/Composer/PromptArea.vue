@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick } from 'vue'
 import { useComposerStore } from '@/stores/composer'
+import { useI18nStore } from '@/stores/i18n'
 import { PROMPT_MAX, PROMPT_SUGGEST } from '@/config/options'
 
 const composer = useComposerStore()
+const { t } = useI18nStore()
 const count = computed(() => composer.prompt.length)
 const isOverSuggest = computed(() => count.value > PROMPT_SUGGEST)
 
@@ -31,14 +33,14 @@ onMounted(() => {
     <!-- Top-left tag -->
     <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 flex items-center gap-1 z-10 tracking-widest">
       <div class="w-1.5 h-1.5 bg-ak-darker"></div>
-      PROMPT_INPUT
+      {{ t('composer.promptInput') }}
     </div>
 
     <textarea
       ref="textareaRef"
       :value="composer.prompt"
       @input="onInput"
-      placeholder="DESCRIBE_SCENE..."
+      :placeholder="t('composer.describeScene')"
       rows="3"
       class="w-full bg-transparent mt-6 p-4 text-white font-sans text-sm outline-none resize-none placeholder-gray-600 tracking-wider"
       style="min-height: 4.5rem; overflow-y: hidden;"

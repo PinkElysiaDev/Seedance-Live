@@ -4,14 +4,26 @@ import type { AppSettings, CustomTemplate, ProviderProfile, ProxyConfig, Seedanc
 import { generateId } from '@/lib/id'
 import { DEFAULT_POLL_INTERVAL_SEC } from '@/config/options'
 import { DEFAULT_CUSTOM_BODY } from '@/lib/template'
+import { DICTIONARY } from '@/i18n/dictionary'
 
 const STORAGE_KEY = 'seedance-live:settings'
 
-// 内置默认 seedance profile（火山方舟官方）
+// 安全的静态翻译，不需要 Pinia 实例，避免在应用初始化前的顶级模块加载阶段抛出“no active Pinia”异常
+function getStaticTranslation(key: string): string {
+  let locale: 'zh' | 'en' = 'zh'
+  try {
+    const raw = localStorage.getItem('seedance-live:locale')
+    if (raw === 'en') locale = 'en'
+  } catch {}
+  const entry = DICTIONARY[key]
+  return entry ? entry[locale] : key
+}
+
+// 内置默认 seedance profile（名称按当前 locale 本地化）
 export function createDefaultSeedanceProfile(): ProviderProfile {
   return {
     id: generateId(),
-    name: '火山方舟官方',
+    name: getStaticTranslation('profile.defaultSeedance'),
     kind: 'seedance',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     apiKey: '',
@@ -19,11 +31,11 @@ export function createDefaultSeedanceProfile(): ProviderProfile {
   }
 }
 
-// 默认 custom profile：预置 3 字段 body 模板
+// 默认 custom profile：预置 3 字段 body 模板（名称按当前 locale 本地化）
 export function createDefaultCustomProfile(): ProviderProfile {
   return {
     id: generateId(),
-    name: '自定义接口',
+    name: getStaticTranslation('profile.defaultCustom'),
     kind: 'custom',
     baseUrl: '',
     apiKey: '',
@@ -161,8 +173,8 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function addProfile(kind: 'seedance' | 'custom'): ProviderProfile {
+    // createDefault*Profile 已按当前 locale 命名，用户可在表单中改写
     const profile = kind === 'seedance' ? createDefaultSeedanceProfile() : createDefaultCustomProfile()
-    profile.name = kind === 'seedance' ? '火山方舟官方' : '自定义接口'
     settings.value.profiles.push(profile)
     settings.value.activeProfileId = profile.id
     return profile

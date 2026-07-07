@@ -32,6 +32,7 @@ import {
   RECOVER_MAX_ATTEMPTS,
 } from '@/config/options'
 import { log } from '@/lib/logger'
+import { useI18nStore } from './i18n'
 import { useSettingsStore } from './settings'
 import { useComposerStore } from './composer'
 
@@ -86,6 +87,7 @@ async function downloadImageCover(url: string, signal: AbortSignal): Promise<str
 export const useTasksStore = defineStore('tasks', () => {
   const tasks = ref<VideoTask[]>([])
   const isInitialized = ref(false)
+  const { t: tr } = useI18nStore()
 
   function findTask(id: string): VideoTask | undefined {
     return tasks.value.find((t) => t.id === id)
@@ -106,8 +108,8 @@ export const useTasksStore = defineStore('tasks', () => {
     const composer = useComposerStore()
     const settings = useSettingsStore()
     const profile = settings.activeProfile
-    if (!profile) return { ok: false, error: '未选择供应商配置' }
-    if (!profile.apiKey.trim()) return { ok: false, error: '请先在设置中填写 API Key' }
+    if (!profile) return { ok: false, error: tr('error.noProvider') }
+    if (!profile.apiKey.trim()) return { ok: false, error: tr('error.apiKeyMissing') }
 
     const errors = validateTask(composer.params, composer.prompt, composer.assets)
     if (errors.length) return { ok: false, error: errors[0] }
@@ -132,7 +134,7 @@ export const useTasksStore = defineStore('tasks', () => {
     } catch (err) {
       // 入库失败（如 IndexedDB 序列化问题）：回滚内存、记日志、上报
       tasks.value = tasks.value.filter((t) => t.id !== task.id)
-      const msg = `任务持久化失败：${errMessage(err)}`
+      const msg = tr('error.persistFailed', { msg: errMessage(err) })
       log.error('task', msg, undefined, task.id)
       return { ok: false, error: msg }
     }
@@ -156,11 +158,11 @@ export const useTasksStore = defineStore('tasks', () => {
     abortControllers.set(taskId, controller)
 
     // 先记日志，再做状态更新：即使后续步骤崩溃，至少留有提交开始的痕迹
-    log.info('submit', `开始提交任务（${profile.kind}）`, { profile: profile.name, model: profile.model || task.params.model, prompt: task.prompt.slice(0, 60) }, taskId)
+    log.info('submit', tr('log.submitStarted', { kind: profile.kind }), { profile: profile.name, model: profile.model || task.params.model, prompt: task.prompt.slice(0, 60) }, taskId)
     try {
       await updateTask(taskId, { status: 'running', error: null })
     } catch (err) {
-      log.error('submit', `状态更新失败：${errMessage(err)}`, undefined, taskId)
+      log.error('submit', tr('log.stateUpdateFailed', { msg: errMessage(err) }), undefined, taskId)
     }
 
     const assets = await getAssets(task.assetIds)
@@ -172,7 +174,7 @@ export const useTasksStore = defineStore('tasks', () => {
       signal: controller.signal,
       timeoutSec: SUBMIT_TIMEOUT_SEC,
       onEnqueued: async (remoteTaskId) => {
-        log.info('submit', `任务已入队 remoteTaskId=${remoteTaskId}`, undefined, taskId)
+        log.info('submit', tr('log.enqueued', { id: remoteTaskId }), undefined, taskId)
         await updateTask(taskId, { remoteTaskId, recoverable: false, remoteStatus: 'queued' })
       },
     }
@@ -182,16 +184,16 @@ export const useTasksStore = defineStore('tasks', () => {
       await startPolling(taskId)
     } catch (err) {
       if (controller.signal.aborted) {
-        log.info('submit', '提交被取消', undefined, taskId)
+        log.info('submit', tr('log.submitCancelled'), undefined, taskId)
         return
       }
       const msg = errMessage(err)
       if (isRecoverableError(err)) {
-        log.warn('submit', `提交遇到可恢复错误：${msg}，将稍后重试`, undefined, taskId)
+        log.warn('submit', tr('log.submitRecoverable', { msg }), undefined, taskId)
         await markRecoverable(taskId, msg)
         scheduleRecover(taskId)
       } else {
-        log.error('submit', `提交失败：${msg}`, undefined, taskId)
+        log.error('submit', tr('log.submitFailed', { msg }), undefined, taskId)
         await updateTask(taskId, {
           status: 'failed',
           error: msg,
@@ -207,7 +209,7 @@ export const useTasksStore = defineStore('tasks', () => {
     const settings = useSettingsStore()
     const task = findTask(taskId)
     if (!task || !task.remoteTaskId) {
-      log.warn('poll', `无法启动轮询：任务不存在或无 remoteTaskId`, { taskId }, taskId)
+      log.warn('poll', tr('log.pollCannotStart'), { taskId }, taskId)
       return
     }
     const profile = settings.settings.profiles.find((p) => p.id === task.providerId) ?? settings.activeProfile
@@ -223,19 +225,19 @@ export const useTasksStore = defineStore('tasks', () => {
     const maxDurationMs = POLL_MAX_DURATION_SEC * 1000
     const startedAt = Date.now()
     let lastHeartbeat = 0
-    log.info('poll', `开始轮询 remoteTaskId=${task.remoteTaskId}（间隔 ${intervalSec}s，上限 ${POLL_MAX_DURATION_SEC}s）`, undefined, taskId)
+    log.info('poll', tr('log.pollStarted', { id: task.remoteTaskId, interval: intervalSec, max: POLL_MAX_DURATION_SEC }), undefined, taskId)
 
     while (true) {
       if (controller.signal.aborted) {
-        log.info('poll', '轮询被取消', undefined, taskId)
+        log.info('poll', tr('log.pollCancelled'), undefined, taskId)
         return
       }
       const elapsedMs = Date.now() - startedAt
       if (elapsedMs > maxDurationMs) {
-        log.error('poll', `轮询超时（已 ${Math.round(elapsedMs / 1000)}s 超过上限 ${POLL_MAX_DURATION_SEC}s）`, undefined, taskId)
+        log.error('poll', tr('log.pollTimeout', { n: Math.round(elapsedMs / 1000), max: POLL_MAX_DURATION_SEC }), undefined, taskId)
         await updateTask(taskId, {
           status: 'failed',
-          error: `视频生成超时（轮询 ${Math.round(elapsedMs / 1000)}s 未完成）`,
+          error: tr('error.timeout', { n: Math.round(elapsedMs / 1000) }),
           finishedAt: Date.now(),
           elapsed: Date.now() - (findTask(taskId)?.createdAt ?? Date.now()),
         })
@@ -244,15 +246,15 @@ export const useTasksStore = defineStore('tasks', () => {
       try {
         const result = await provider.poll(profile, task.remoteTaskId, controller.signal, proxy)
         if (result.status === 'succeeded') {
-          log.info('poll', '轮询返回成功，开始下载视频', undefined, taskId)
+          log.info('poll', tr('log.pollSuccess'), undefined, taskId)
           await finalizeSuccess(taskId, result, controller.signal)
           return
         }
         if (result.status === 'failed' || result.status === 'cancelled' || result.status === 'expired') {
-          log.warn('poll', `轮询返回终态：${result.status}`, { error: result.error }, taskId)
+          log.warn('poll', tr('log.pollTerminal', { status: result.status }), { error: result.error }, taskId)
           await updateTask(taskId, {
             status: result.status,
-            error: result.error ?? `视频生成${result.status}`,
+            error: result.error ?? tr('error.genFailed', { status: result.status }),
             errorDetails: result.details,
             finishedAt: Date.now(),
             elapsed: Date.now() - (findTask(taskId)?.createdAt ?? Date.now()),
@@ -264,19 +266,19 @@ export const useTasksStore = defineStore('tasks', () => {
         const now = Date.now()
         if (now - lastHeartbeat >= POLL_LOG_EVERY_SEC * 1000) {
           lastHeartbeat = now
-          log.info('poll', `仍在生成中（已轮询 ${Math.round((now - startedAt) / 1000)}s）`, { remoteStatus: result.status, progress: result.progress }, taskId)
+          log.info('poll', tr('log.pollRunning', { n: Math.round((now - startedAt) / 1000) }), { remoteStatus: result.status, progress: result.progress }, taskId)
         }
       } catch (err) {
         if (controller.signal.aborted) return
         const msg = errMessage(err)
         if (isRecoverableError(err)) {
-          log.warn('poll', `轮询遇到可恢复错误：${msg}，标记为可恢复`, undefined, taskId)
+          log.warn('poll', tr('log.pollRecoverable', { msg }), undefined, taskId)
           await markRecoverable(taskId, msg)
           scheduleRecover(taskId)
           return
         }
         // 非 recoverable 错误（如 HTTP 4xx/5xx）：记录后继续轮询，直到总时长耗尽
-        log.warn('poll', `轮询请求出错（将继续重试）：${msg}`, undefined, taskId)
+        log.warn('poll', tr('log.pollErrorRetry', { msg }), undefined, taskId)
       }
       try {
         await sleep(intervalSec * 1000, controller.signal)
@@ -295,7 +297,7 @@ export const useTasksStore = defineStore('tasks', () => {
     const task = findTask(taskId)
     if (!task) return
     if (!result.videoUrl) {
-      await updateTask(taskId, { status: 'failed', error: '任务成功但未返回视频 URL', finishedAt: Date.now() })
+      await updateTask(taskId, { status: 'failed', error: tr('error.noVideoUrl'), finishedAt: Date.now() })
       return
     }
     let videoBlobId: string | undefined
@@ -309,18 +311,18 @@ export const useTasksStore = defineStore('tasks', () => {
       const blobId = generateId()
       await putBlob({ id: blobId, buffer: await blob.arrayBuffer(), mime: blob.type || 'video/mp4' })
       videoBlobId = blobId
-      log.info('poll', `视频已下载并入库（${blob.size}B）`, undefined, taskId)
+      log.info('poll', tr('log.videoDownloaded', { n: blob.size }), undefined, taskId)
       try {
         const cover = await captureCover(blob)
         const coverId = generateId()
         await putCover({ id: coverId, dataUrl: cover })
         coverImageId = coverId
       } catch (err) {
-        log.warn('poll', `封面截图失败（不影响结果）：${errMessage(err)}`, undefined, taskId)
+        log.warn('poll', tr('log.coverFailed', { msg: errMessage(err) }), undefined, taskId)
       }
     } else {
       // 下载失败（常见为 CORS），保留远程 URL 兜底并记日志
-      log.warn('poll', `视频下载失败（可能 CORS），保留远程 URL 兜底（有时效，请尽快下载）`, { url: fallbackUrl }, taskId)
+      log.warn('poll', tr('log.videoDownloadFailed'), { url: fallbackUrl }, taskId)
     }
     // 末帧续帧图
     if (result.lastFrameUrl) {
@@ -348,7 +350,7 @@ export const useTasksStore = defineStore('tasks', () => {
     if (settings.settings.notifyOnComplete && 'Notification' in window) {
       try {
         if (Notification.permission === 'granted') {
-          new Notification('视频生成完成', { body: task.prompt.slice(0, 60) })
+          new Notification(tr('notify.title'), { body: task.prompt.slice(0, 60) })
         }
       } catch {
         // 忽略
@@ -357,7 +359,7 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   async function markRecoverable(taskId: string, error: string) {
-    log.warn('task', `任务标记为可恢复：${error}`, undefined, taskId)
+    log.warn('task', tr('log.taskRecoverable', { msg: error }), undefined, taskId)
     await updateTask(taskId, { status: 'running', recoverable: true, error })
   }
 
@@ -367,17 +369,17 @@ export const useTasksStore = defineStore('tasks', () => {
     const attempts = (recoverAttempts.get(taskId) ?? 0) + 1
     recoverAttempts.set(taskId, attempts)
     if (attempts > RECOVER_MAX_ATTEMPTS) {
-      log.error('task', `多次重连失败（${attempts}次），放弃`, undefined, taskId)
+      log.error('task', tr('log.recoverExhausted', { n: attempts }), undefined, taskId)
       recoverAttempts.delete(taskId)
       void updateTask(taskId, {
         status: 'failed',
-        error: '多次重连失败，请检查网络或代理后重试',
+        error: tr('error.recoverExhausted'),
         recoverable: false,
         finishedAt: Date.now(),
       })
       return
     }
-    log.info('task', `${RECOVER_DELAY_MS / 1000}s 后重试轮询（第 ${attempts}/${RECOVER_MAX_ATTEMPTS} 次）`, undefined, taskId)
+    log.info('task', tr('log.recoverRetry', { delay: RECOVER_DELAY_MS / 1000, attempt: attempts, max: RECOVER_MAX_ATTEMPTS }), undefined, taskId)
     const t = setTimeout(() => {
       timers.delete(taskId)
       void startPolling(taskId)
@@ -387,7 +389,7 @@ export const useTasksStore = defineStore('tasks', () => {
 
   // —— 取消 ——
   async function cancelTask(taskId: string) {
-    log.info('task', `取消任务`, undefined, taskId)
+    log.info('task', tr('log.taskCancelled'), undefined, taskId)
     const controller = abortControllers.get(taskId)
     controller?.abort()
     abortControllers.delete(taskId)
@@ -400,7 +402,7 @@ export const useTasksStore = defineStore('tasks', () => {
   async function retryTask(taskId: string) {
     const task = findTask(taskId)
     if (!task) return
-    log.info('task', `重试任务`, undefined, taskId)
+    log.info('task', tr('log.taskRetry'), undefined, taskId)
     clearTimer(taskId)
     recoverAttempts.delete(taskId)
     abortControllers.delete(taskId)
@@ -438,12 +440,12 @@ export const useTasksStore = defineStore('tasks', () => {
    */
   async function continueFromTask(parentId: string): Promise<{ ok: boolean; error?: string; taskId?: string }> {
     const parent = findTask(parentId)
-    if (!parent) return { ok: false, error: '源任务不存在' }
-    if (!parent.lastFrameImageId) return { ok: false, error: '源任务未生成末帧，无法续帧' }
+    if (!parent) return { ok: false, error: tr('error.continueSourceMissing') }
+    if (!parent.lastFrameImageId) return { ok: false, error: tr('error.continueNoLastFrame') }
 
     // 取末帧 cover dataUrl，转成 asset 作为新任务首帧
     const cover = await getCover(parent.lastFrameImageId)
-    if (!cover) return { ok: false, error: '末帧数据已丢失' }
+    if (!cover) return { ok: false, error: tr('error.continueCoverLost') }
     // 把末帧 dataUrl 落成 blob + asset
     const blob = await dataUrlToBlob(cover.dataUrl)
     const blobId = generateId()
@@ -490,7 +492,7 @@ export const useTasksStore = defineStore('tasks', () => {
     all.sort((a, b) => b.createdAt - a.createdAt)
     tasks.value = all
     isInitialized.value = true
-    log.info('task', `初始化：加载 ${all.length} 个任务`, {
+    log.info('task', tr('log.initLoaded', { n: all.length }), {
       running: all.filter((t) => t.status === 'running').length,
       queued: all.filter((t) => t.status === 'queued').length,
       succeeded: all.filter((t) => t.status === 'succeeded').length,
@@ -500,16 +502,16 @@ export const useTasksStore = defineStore('tasks', () => {
     for (const t of all) {
       // 有 remoteTaskId 且处于活跃态（running/queued/recoverable）：恢复轮询
       if (t.remoteTaskId && (t.status === 'running' || t.status === 'queued' || t.recoverable)) {
-        log.info('task', `恢复轮询任务 ${t.id}（status=${t.status}, remoteTaskId=${t.remoteTaskId}）`, undefined, t.id)
+        log.info('task', tr('log.taskRecovered', { id: t.id, status: t.status, remote: t.remoteTaskId }), undefined, t.id)
         // 确保状态为 running 以便 UI 显示
         if (t.status === 'queued') await updateTask(t.id, { status: 'running' })
         setTimeout(() => void startPolling(t.id), 0)
       } else if (t.status === 'running' || t.status === 'queued') {
         // 活跃但无 remoteTaskId（submit 阶段刷新中断）：无法恢复，明确标记
-        log.warn('task', `任务 ${t.id} 在提交阶段被刷新中断（无 remoteTaskId），标记为失败`, undefined, t.id)
+        log.warn('task', tr('log.taskInterrupted', { id: t.id }), undefined, t.id)
         await updateTask(t.id, {
           status: 'failed',
-          error: '提交阶段被刷新中断，请重试',
+          error: tr('error.submitInterrupted'),
           recoverable: false,
           finishedAt: Date.now(),
         })
@@ -615,7 +617,7 @@ export const useTasksStore = defineStore('tasks', () => {
       // 运行中的任务无法恢复轮询，标记为失败
       if (task.status === 'running') {
         task.status = 'failed'
-        task.error = task.error || '导入的任务无法恢复轮询'
+        task.error = task.error || tr('error.importedNotResumable')
       }
       task.recoverable = false
       await putTask(task)

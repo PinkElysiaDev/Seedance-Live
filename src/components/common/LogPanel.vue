@@ -3,26 +3,28 @@ import { ref, computed } from 'vue'
 import Modal from './Modal.vue'
 import VirtualLogList from './VirtualLogList.vue'
 import { useLogsStore, type LogCategory, type LogLevel } from '@/stores/logs'
+import { useI18nStore } from '@/stores/i18n'
 
 const props = defineProps<{ show: boolean, isView?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 const logs = useLogsStore()
+const { t } = useI18nStore()
 const expanded = ref<Set<number>>(new Set())
 const levelFilter = ref<Set<LogLevel>>(new Set(['debug', 'info', 'warn', 'error']))
 const catFilter = ref<'all' | LogCategory>('all')
 const keyword = ref('')
 
-const CATEGORIES: Array<{ value: 'all' | LogCategory; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'submit', label: '提交' },
-  { value: 'poll', label: '轮询' },
+const CATEGORIES = computed<Array<{ value: 'all' | LogCategory; label: string }>>(() => [
+  { value: 'all', label: t('log.catAll') },
+  { value: 'submit', label: t('log.catSubmit') },
+  { value: 'poll', label: t('log.catPoll') },
   { value: 'http', label: 'HTTP' },
-  { value: 'task', label: '任务' },
-  { value: 'test', label: '测试' },
-  { value: 'ai', label: 'AI' },
-  { value: 'settings', label: '设置' },
-]
+  { value: 'task', label: t('log.catTask') },
+  { value: 'test', label: t('log.catTest') },
+  { value: 'ai', label: t('log.catAi') },
+  { value: 'settings', label: t('log.catSettings') },
+])
 
 const filtered = computed(() => {
   return logs.entries.filter((e) => {
@@ -149,14 +151,14 @@ function toggleVerbose() {
       <!-- 搜索/分类/操作工具栏 -->
       <div class="flex flex-wrap items-center gap-3 p-3 bg-ak-dark/80 border border-gray-800 relative">
         <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-ak-400/50 pointer-events-none"></div>
-        <input v-model="keyword" placeholder="SEARCH_LOGS..." class="flex-1 min-w-[200px] bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 focus:border-ak-400 outline-none transition-colors placeholder-gray-600" />
+        <input v-model="keyword" :placeholder="t('log.searchLogs')" class="flex-1 min-w-[200px] bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 focus:border-ak-400 outline-none transition-colors placeholder-gray-600" />
         <select v-model="catFilter" class="bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 focus:border-ak-400 outline-none transition-colors cursor-pointer">
           <option v-for="c in CATEGORIES" :key="c.value" :value="c.value">{{ c.label.toUpperCase() }}</option>
         </select>
         <div class="flex gap-2">
-          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="logs.clear">&gt; CLEAR</button>
-          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="copyAll">&gt; COPY</button>
-          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="exportJson">&gt; EXPORT</button>
+          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="logs.clear">&gt; {{ t('log.clear') }}</button>
+          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="copyAll">&gt; {{ t('log.copy') }}</button>
+          <button class="bg-ak-darker border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-2 text-xs font-mono transition-colors" @click="exportJson">&gt; {{ t('log.export') }}</button>
         </div>
       </div>
 
@@ -180,8 +182,8 @@ function toggleVerbose() {
                 <!-- 中心核心（脉动） -->
                 <div class="w-2.5 h-2.5 bg-ak-400 rounded-full animate-[terminal-core_2s_ease-in-out_infinite]"></div>
               </div>
-              <span class="mb-2 text-ak-400/80 font-bold tracking-widest">&gt;&gt; NO_LOG_ENTRIES_FOUND &lt;&lt;</span>
-              <span class="text-xs tracking-widest text-gray-700">SYSTEM_IDLE // AWAITING_COMMAND</span>
+              <span class="mb-2 text-ak-400/80 font-bold tracking-widest">&gt;&gt; {{ t('log.noEntries') }} &lt;&lt;</span>
+              <span class="text-xs tracking-widest text-gray-700">{{ t('log.systemIdle') }}</span>
             </div>
           </template>
 
@@ -194,7 +196,7 @@ function toggleVerbose() {
                 <span :class="levelColor[e.level]" class="font-bold text-xs uppercase min-w-[46px] pt-0.5">{{ e.level }}</span>
                 <span class="flex-1 text-gray-300 leading-relaxed group-hover/item:text-white transition-colors" :class="{'truncate': !expanded.has(e.id)}">{{ e.message }}</span>
                 <span v-if="e.data != null" class="text-ak-400 text-xs pt-0.5 whitespace-nowrap opacity-50 group-hover/item:opacity-100 transition-opacity">
-                  {{ expanded.has(e.id) ? '[-] COLLAPSE' : '[+] EXPAND' }}
+                  {{ expanded.has(e.id) ? t('log.collapse') : t('log.expand') }}
                 </span>
               </div>
               <pre v-if="expanded.has(e.id) && e.data != null" class="mt-3 ml-[150px] max-h-96 overflow-auto bg-ak-dark border border-ak-400/20 p-3 text-xs text-ak-400 break-all whitespace-pre-wrap shadow-[inset_0_0_15px_rgba(0,229,255,0.05)]">{{ JSON.stringify(e.data, null, 2) }}</pre>
@@ -207,7 +209,7 @@ function toggleVerbose() {
   <Modal v-else :show="props.show" title="SYS_LOGS //" width="820px" @close="emit('close')">
     <div class="space-y-3">
       <div class="flex flex-wrap items-center gap-2">
-        <input v-model="keyword" placeholder="SEARCH_LOGS..." class="flex-1 bg-ak-dark border border-gray-800 text-white font-mono text-xs px-2 py-1 clip-chamfer focus:border-ak-400 outline-none" />
+        <input v-model="keyword" :placeholder="t('log.searchLogs')" class="flex-1 bg-ak-dark border border-gray-800 text-white font-mono text-xs px-2 py-1 clip-chamfer focus:border-ak-400 outline-none" />
         <select v-model="catFilter" class="bg-ak-dark border border-gray-800 text-white font-mono text-xs px-2 py-1 clip-chamfer focus:border-ak-400 outline-none">
           <option v-for="c in CATEGORIES" :key="c.value" :value="c.value">{{ c.label.toUpperCase() }}</option>
         </select>
@@ -217,16 +219,16 @@ function toggleVerbose() {
             :class="levelFilter.has(l) ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'bg-ak-dark border border-gray-800 text-gray-500 hover:text-white hover:border-ak-400/50'"
             @click="toggleLevel(l)">{{ l.toUpperCase() }}</button>
         </div>
-        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="logs.clear">CLEAR</button>
-        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="copyAll">COPY</button>
-        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="exportJson">EXPORT</button>
+        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="logs.clear">{{ t('log.clear') }}</button>
+        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="copyAll">{{ t('log.copy') }}</button>
+        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:text-ak-400 hover:border-ak-400/50 px-3 py-1 text-[10px] font-mono clip-chamfer transition-colors" @click="exportJson">{{ t('log.export') }}</button>
       </div>
 
       <VirtualLogList :items="filtered" :estimate-size="30" :gap="4" class="max-h-[60vh] overflow-auto bg-ak-dark/50 border border-ak-400/20 p-2 clip-chamfer relative group">
         <template #empty>
           <div class="py-8 flex flex-col items-center justify-center text-[10px] font-mono text-gray-600">
-             <span class="mb-1 text-ak-400 font-bold">>> NO_LOG_ENTRIES <<</span>
-             <span>SYSTEM IDLE</span>
+             <span class="mb-1 text-ak-400 font-bold">>> {{ t('log.noEntries') }} <<</span>
+             <span>{{ t('log.systemIdle') }}</span>
           </div>
         </template>
         <template #row="{ item: e }">
@@ -236,7 +238,7 @@ function toggleVerbose() {
               <span class="bg-ak-dark border border-gray-800 px-1 text-[10px] text-gray-400 uppercase">{{ e.category }}</span>
               <span :class="levelColor[e.level]" class="font-bold text-[10px] uppercase">{{ e.level }}</span>
               <span class="flex-1 truncate text-gray-300">{{ e.message }}</span>
-              <span v-if="e.data != null" class="text-ak-400 text-[10px]">> VIEW</span>
+              <span v-if="e.data != null" class="text-ak-400 text-[10px]">{{ t('log.view') }}</span>
             </div>
             <pre v-if="expanded.has(e.id) && e.data != null" class="mt-2 max-h-60 overflow-auto bg-ak-dark border border-gray-800 p-2 text-[10px] text-ak-400 clip-chamfer break-all whitespace-pre-wrap">{{ JSON.stringify(e.data, null, 2) }}</pre>
           </div>

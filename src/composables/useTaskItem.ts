@@ -3,6 +3,7 @@ import type { VideoTask } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
 import { useComposerStore } from '@/stores/composer'
 import { useToastStore } from '@/stores/toast'
+import { useI18nStore } from '@/stores/i18n'
 import { saveUrl } from '@/lib/download'
 
 /**
@@ -63,6 +64,7 @@ export function useTaskActions(getTask: () => VideoTask | undefined, videoUrl: R
   const tasks = useTasksStore()
   const composer = useComposerStore()
   const toast = useToastStore()
+  const { t } = useI18nStore()
 
   function downloadFilename() {
     return `seedance-${(getTask()?.id ?? '').slice(0, 8)}.mp4`
@@ -87,7 +89,7 @@ export function useTaskActions(getTask: () => VideoTask | undefined, videoUrl: R
     const task = getTask()
     if (!task) return
     await tasks.retryTask(task.id)
-    toast.show('已重新提交', 'success')
+    toast.show(t('toast.retried'), 'success')
   }
 
   async function cancel() {
@@ -107,8 +109,8 @@ export function useTaskActions(getTask: () => VideoTask | undefined, videoUrl: R
     const task = getTask()
     if (!task) return
     const res = await tasks.continueFromTask(task.id)
-    if (!res.ok) toast.show(res.error ?? '续帧失败', 'error')
-    else toast.show('已创建续帧任务', 'success')
+    if (!res.ok) toast.show(res.error ?? t('toast.chainFailed'), 'error')
+    else toast.show(t('toast.chained'), 'success')
   }
 
   /** 复用任务的提示词与参数到输入区。 */
@@ -117,7 +119,7 @@ export function useTaskActions(getTask: () => VideoTask | undefined, videoUrl: R
     if (!task) return
     composer.setPrompt(task.prompt)
     composer.patchParams({ ...task.params })
-    toast.show('已载入配置到输入区', 'info')
+    toast.show(t('toast.configLoaded'), 'info')
   }
 
   return { download, retry, cancel, remove, continueFrame, reuseConfig }

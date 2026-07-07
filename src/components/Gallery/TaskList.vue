@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
+import { useI18nStore } from '@/stores/i18n'
 import TaskCard from './TaskCard.vue'
 import TaskDetail from './TaskDetail.vue'
 import type { TaskStatus } from '@/types'
 
 const tasks = useTasksStore()
+const { t } = useI18nStore()
 const filter = ref<'all' | TaskStatus>('all')
 const keyword = ref('')
 const detailId = ref<string | null>(null)
@@ -23,12 +25,17 @@ const filtered = computed(() => {
 const leftColTasks = computed(() => filtered.value.filter((_, i) => i % 2 === 0))
 const rightColTasks = computed(() => filtered.value.filter((_, i) => i % 2 === 1))
 
-const filters: Array<{ value: 'all' | TaskStatus; label: string }> = [
-  { value: 'all', label: '全部记录' },
-  { value: 'running', label: '生成中' },
-  { value: 'succeeded', label: '已完成' },
-  { value: 'failed', label: '失败' },
-]
+// 筛选项：label 在模板中按当前 locale 实时翻译
+const filterValues: Array<'all' | TaskStatus> = ['all', 'running', 'succeeded', 'failed']
+const filterLabelKey: Record<'all' | TaskStatus, string> = {
+  all: 'filter.all',
+  running: 'filter.running',
+  succeeded: 'filter.succeeded',
+  failed: 'filter.failed',
+  cancelled: 'filter.failed',
+  expired: 'filter.failed',
+  queued: 'filter.running',
+}
 
 function openDetail(id: string) {
   detailId.value = id
@@ -93,37 +100,37 @@ function selectInChain(id: string) {
           VIDEO
         </div>
         <div class="font-sans text-white tracking-[0.45em] text-lg mt-3 opacity-50">
-          视频列表
+          {{ t('gallery.videoList') }}
         </div>
       </div>
 
       <button
-        v-for="f in filters"
-        :key="f.value"
+        v-for="f in filterValues"
+        :key="f"
         class="group relative flex items-center justify-between w-full h-12 text-left px-4 transition-colors duration-300 bg-ak-gray hover:bg-ak-400/20 overflow-hidden"
-        @click="filter = f.value"
+        @click="filter = f"
       >
         <span
           class="font-sans font-bold text-sm tracking-widest transition-colors z-10"
-          :class="filter === f.value ? 'text-ak-400' : 'text-gray-400 group-hover:text-white'"
+          :class="filter === f ? 'text-ak-400' : 'text-gray-400 group-hover:text-white'"
         >
-          {{ f.label }}
+          {{ t(filterLabelKey[f]) }}
         </span>
         <span
           class="font-sans font-black text-ak-400 z-10 transition-opacity duration-300"
-          :class="filter === f.value ? 'opacity-50' : 'opacity-0'"
+          :class="filter === f ? 'opacity-50' : 'opacity-0'"
         >&lt;</span>
 
         <!-- Active Background Highlight -->
         <div
           class="absolute inset-0 bg-ak-400/10 transition-opacity duration-300"
-          :class="filter === f.value ? 'opacity-100' : 'opacity-0'"
+          :class="filter === f ? 'opacity-100' : 'opacity-0'"
         ></div>
 
         <!-- 选中态竖条：从右向左出现并移动到最左侧 -->
         <div
           class="absolute top-0 bottom-0 w-1 bg-ak-400 transition-[left,opacity] duration-300 ease-out z-20"
-          :class="filter === f.value ? 'left-0 opacity-100' : 'left-full opacity-0'"
+          :class="filter === f ? 'left-0 opacity-100' : 'left-full opacity-0'"
         ></div>
       </button>
 

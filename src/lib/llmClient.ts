@@ -1,5 +1,6 @@
 import type { LlmConfig, ProxyConfig } from '@/types'
 import { httpFetch } from '@/net/httpClient'
+import { useI18nStore } from '@/stores/i18n'
 
 export type LlmMessageContent =
   | string
@@ -27,7 +28,7 @@ export async function callLLM(
     logCategory: 'ai',
   })
   const content = res.choices?.[0]?.message?.content
-  if (typeof content !== 'string') throw new Error('LLM 未返回内容')
+  if (typeof content !== 'string') throw new Error(useI18nStore().t('error.llmNoContent'))
   return content
 }
 

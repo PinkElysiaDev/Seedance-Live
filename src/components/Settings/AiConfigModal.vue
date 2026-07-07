@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useToastStore } from '@/stores/toast'
+import { useI18nStore } from '@/stores/i18n'
 import { callLLM, parseLLMJson } from '@/lib/llmClient'
 import { httpFetch } from '@/net/httpClient'
 import { SYSTEM_PROMPT, buildUserMessage, type AiParsedConfig } from '@/config/llmPrompt'
@@ -15,6 +16,7 @@ const emit = defineEmits<{ close: []; applied: [] }>()
 
 const settings = useSettingsStore()
 const toast = useToastStore()
+const { t } = useI18nStore()
 
 const mode = ref<'text' | 'image' | 'url'>('text')
 const docText = ref('')
@@ -47,7 +49,7 @@ async function fetchUrlContent(): Promise<string> {
 async function parse() {
   const cfg = settings.settings.llmConfig
   if (!cfg?.baseUrl || !cfg?.apiKey || !cfg?.model) {
-    toast.show('请先在「AI 辅助」tab 配置 LLM', 'error')
+    toast.show(t('toast.aiConfigLlmFirst'), 'error')
     return
   }
   loading.value = true
@@ -63,18 +65,18 @@ async function parse() {
       { role: 'system' as const, content: SYSTEM_PROMPT },
       buildUserMessage(text, imgs),
     ]
-    log.info('ai', 'AI 解析请求', { mode: mode.value, textLen: text.length, images: imgs?.length ?? 0 })
+    log.info('ai', t('log.aiParseRequest'), { mode: mode.value, textLen: text.length, images: imgs?.length ?? 0 })
     const content = await callLLM(cfg, messages, { proxy: settings.proxy.enabled ? settings.proxy : undefined })
     rawContent.value = content
-    log.debug('ai', 'AI 原始返回', content)
+    log.debug('ai', t('log.aiRawResponse'), content)
     const obj = parseLLMJson(content) as AiParsedConfig
     parsed.value = obj
-    log.info('ai', 'AI 解析完成', obj)
-    toast.show('解析完成，请检查后应用', 'success')
+    log.info('ai', t('log.aiParsedDone'), obj)
+    toast.show(t('toast.aiParsed'), 'success')
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    toast.show(`解析失败：${msg}`, 'error')
-    log.error('ai', 'AI 解析失败', msg)
+    toast.show(t('toast.aiParseFailed', { msg }), 'error')
+    log.error('ai', t('log.aiParseFailed'), msg)
   } finally {
     loading.value = false
   }
@@ -84,7 +86,7 @@ function apply() {
   const p = parsed.value
   if (!p || !settings.activeProfile) return
   if (!p.submit?.url || !p.submit?.body || !p.response?.taskIdPath || !p.response?.statusPath || !p.response?.videoUrlPath) {
-    toast.show('解析结果缺少必填字段，请手动补全', 'error')
+    toast.show(t('toast.aiMissingFields'), 'error')
     return
   }
   const tpl: CustomTemplate = {
@@ -116,17 +118,17 @@ function apply() {
   <Modal :show="props.show" title="✨ AI_PARSE_MODULE //" width="680px" @close="emit('close')">
     <div class="space-y-4">
       <p class="font-mono text-[10px] text-gray-500 leading-relaxed border-l-2 border-ak-400 pl-2">
-        // 粘贴站点 API 文档内容、上传文档截图，或填文档 URL（经代理抓取）。将调用你在「AI 辅助」配置的大模型生成自定义请求模板。
+        // {{ t('notice.aiPasteHint') }}
       </p>
 
       <div class="flex gap-1 border border-gray-800 bg-ak-dark p-1 w-fit">
-        <button v-for="t in [{k:'text',l:'TEXT_INPUT'},{k:'image',l:'IMAGE_UPLOAD'},{k:'url',l:'DOC_URL'}]" :key="t.k"
+        <button v-for="tab in [{k:'text',key:'ai.tabText'},{k:'image',key:'ai.tabImage'},{k:'url',key:'ai.tabUrl'}]" :key="tab.k"
           class="px-4 py-1.5 font-mono text-[10px] transition"
-          :class="mode === t.k ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'text-gray-500 hover:text-white'"
-          @click="mode = t.k as typeof mode">> {{ t.l }}</button>
+          :class="mode === tab.k ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'text-gray-500 hover:text-white'"
+          @click="mode = tab.k as typeof mode">> {{ t(tab.key) }}</button>
       </div>
 
-      <textarea v-if="mode === 'text'" v-model="docText" rows="6" placeholder=">_ Paste API documentation here..." class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs p-3 focus:border-ak-400 outline-none" />
+      <textarea v-if="mode === 'text'" v-model="docText" rows="6" :placeholder="t('ai.placeholderPaste')" class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs p-3 focus:border-ak-400 outline-none" />
 
       <div v-else-if="mode === 'image'" class="space-y-3 p-4 border border-dashed border-gray-800 bg-ak-dark/50">
         <input type="file" accept="image/*" multiple class="text-[10px] font-mono text-gray-400 file:bg-ak-dark file:border file:border-gray-800 file:text-ak-400 file:px-3 file:py-1 hover:file:bg-ak-gray transition-colors" @change="onPickImages" />
@@ -140,28 +142,29 @@ function apply() {
 
       <div v-else>
         <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs px-3 py-2 focus:border-ak-400 outline-none" />
-        <p class="mt-1 font-mono text-[10px] text-gray-600">// 需在「代理」中启用代理才能跨域抓取；失败请改用粘贴内容或截图。</p>
+        <p class="mt-1 font-mono text-[10px] text-gray-600">// {{ t('notice.aiUrlProxyHint') }}</p>
       </div>
 
-      <button class="bg-white text-ak-darker font-mono font-bold text-xs px-6 py-2.5 hover:bg-ak-400 shadow-[0_0_10px_rgba(0,229,255,0.3)] transition disabled:opacity-50 disabled:grayscale" :disabled="loading" @click="parse">
-        {{ loading ? '> PROCESSING...' : '> INITIATE_PARSE' }}
+      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group disabled:opacity-50 disabled:grayscale disabled:hover:bg-white disabled:hover:shadow-none" :disabled="loading" @click="parse">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
+        {{ loading ? t('ai.processing') : t('ai.initiateParse') }}
       </button>
 
       <div v-if="parsed" class="border border-ak-400/30 bg-ak-darker p-4 mt-4">
-        <div class="font-mono text-[10px] font-bold text-ak-400 border-b border-gray-800 pb-1 mb-3">PARSE_RESULT_PREVIEW //</div>
+        <div class="font-mono text-[10px] font-bold text-ak-400 border-b border-gray-800 pb-1 mb-3">{{ t('ai.resultPreview') }} //</div>
         <div class="space-y-1.5 font-mono text-[10px] text-gray-400">
-          <div><span class="text-gray-600">MODEL:</span> <span class="text-white">{{ parsed.model || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">SUBMIT_URL:</span> <span class="text-white">{{ parsed.submit?.url || 'N/A' }}</span></div>
-          <div class="pt-1"><span class="text-gray-600 block mb-1">SUBMIT_BODY:</span><pre class="max-h-32 overflow-auto bg-ak-dark border border-gray-800 p-2 text-ak-400">{{ parsed.submit?.body }}</pre></div>
-          <div class="pt-2"><span class="text-gray-600">POLL_URL:</span> <span class="text-white">{{ parsed.poll?.url || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">TASK_ID_PATH:</span> <span class="text-white">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">STATUS_PATH:</span> <span class="text-white">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">SUCCESS_VALUES:</span> <span class="text-white">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">FAILURE_VALUES:</span> <span class="text-white">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">VIDEO_URL_PATH:</span> <span class="text-white">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
-          <div v-if="parsed.notes" class="text-ak-400 mt-2 border-l-2 border-ak-400 pl-2">NOTE: {{ parsed.notes }}</div>
+          <div><span class="text-gray-600">{{ t('ai.fieldModel') }}:</span> <span class="text-white">{{ parsed.model || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">{{ t('form.submitUrl') }}:</span> <span class="text-white">{{ parsed.submit?.url || 'N/A' }}</span></div>
+          <div class="pt-1"><span class="text-gray-600 block mb-1">{{ t('ai.fieldSubmitBody') }}:</span><pre class="max-h-32 overflow-auto bg-ak-dark border border-gray-800 p-2 text-ak-400">{{ parsed.submit?.body }}</pre></div>
+          <div class="pt-2"><span class="text-gray-600">{{ t('form.pollUrl') }}:</span> <span class="text-white">{{ parsed.poll?.url || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">{{ t('form.taskIdPath') }}:</span> <span class="text-white">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">{{ t('form.statusPath') }}:</span> <span class="text-white">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">{{ t('form.successValues') }}:</span> <span class="text-white">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">{{ t('form.failureValues') }}:</span> <span class="text-white">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-gray-600">{{ t('form.videoUrlPath') }}:</span> <span class="text-white">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
+          <div v-if="parsed.notes" class="text-ak-400 mt-2 border-l-2 border-ak-400 pl-2">{{ t('ai.fieldNote') }}: {{ parsed.notes }}</div>
         </div>
-        <button class="mt-4 border border-teal-500/50 bg-teal-950/20 text-teal-400 px-4 py-2 font-mono text-xs hover:bg-teal-400 hover:text-ak-darker transition-colors" @click="apply">> APPLY_TO_PROFILE</button>
+        <button class="mt-4 border border-teal-500/50 bg-teal-950/20 text-teal-400 px-4 py-2 font-mono text-xs hover:bg-teal-400 hover:text-ak-darker transition-colors" @click="apply">> {{ t('ai.applyToProfile') }}</button>
       </div>
     </div>
   </Modal>

@@ -17,21 +17,23 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 
 <template>
   <div
-    class="flex items-center justify-between p-4 md:p-6 cursor-pointer transition-colors duration-300 border border-gray-800 bg-ak-dark/50 hover:border-ak-400/50"
+    class="flex items-center justify-between gap-3 p-4 md:p-6 cursor-pointer transition-colors duration-300 border border-gray-800 bg-ak-dark/50 hover:border-ak-400/50"
     @click="emit('update:modelValue', !modelValue)"
   >
-    <div class="flex flex-col gap-1">
+    <!-- min-w-0 + break-words：长标签可换行/收缩，避免挤压右侧状态文案（item 10） -->
+    <div class="flex flex-col gap-1 min-w-0">
       <span
-        class="font-sans italic font-bold tracking-widest uppercase"
+        class="font-sans italic font-bold tracking-widest uppercase break-words"
         :class="[labelClass ?? 'text-sm', modelValue ? 'text-ak-400' : (inactiveClass ?? 'text-gray-400')]"
       >{{ label }}</span>
-      <span class="font-mono text-[10px] text-gray-500">{{ hint }}</span>
+      <span class="font-mono text-[10px] text-gray-500 break-words">{{ hint }}</span>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="font-sans text-xs tracking-wider font-bold" :class="modelValue ? 'text-ak-400' : 'text-gray-500'">
+    <!-- flex-shrink-0 + whitespace-nowrap：[ ACTIVE ]/[[ INACTIVE ]] 始终单行，不再被挤成三行 -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="font-sans text-xs tracking-wider font-bold whitespace-nowrap" :class="modelValue ? 'text-ak-400' : 'text-gray-500'">
         {{ modelValue ? '[ ACTIVE ]' : '[ INACTIVE ]' }}
       </span>
-      <div class="w-1.5 h-4 bg-ak-400 transition duration-300" :class="modelValue ? 'opacity-100 shadow-[0_0_8px_#00E5FF]' : 'opacity-20'"></div>
+      <div class="w-1.5 h-4 bg-ak-400 transition duration-300 flex-shrink-0" :class="modelValue ? 'opacity-100 shadow-[0_0_8px_#00E5FF]' : 'opacity-20'"></div>
     </div>
   </div>
 </template>

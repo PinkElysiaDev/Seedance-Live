@@ -3,7 +3,6 @@ import { ref, watch } from 'vue'
 import type { StoredAsset, VideoParams } from '@/types'
 import { defaultParams } from '@/config/options'
 import { getAssets } from '@/db/repos'
-import { useSettingsStore } from './settings'
 
 const STORAGE_KEY = 'seedance-live:composer'
 
@@ -15,9 +14,11 @@ interface ComposerDraft {
 }
 
 function loadDraft(): ComposerDraft {
+  // 顶级模块加载时可能 Pinia 未就绪，避免在此处调用 useSettingsStore()。
+  // defaultModel 回退使用硬编码默认值 'doubao-seedance-2.0'
   const defaultDraft: ComposerDraft = {
     prompt: '',
-    params: defaultParams(useSettingsStore().settings.defaultModel),
+    params: defaultParams('doubao-seedance-2.0'),
     assetIds: [],
     activeMode: 'REF_MODE',
   }

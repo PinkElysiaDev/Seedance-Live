@@ -2,12 +2,14 @@
 import { computed } from 'vue'
 import { useComposerStore } from '@/stores/composer'
 import { useSettingsStore } from '@/stores/settings'
+import { useI18nStore } from '@/stores/i18n'
 import { resolutionsForModel, ratiosForModel } from '@/config/models'
 import { DURATION_MIN, DURATION_MAX } from '@/config/options'
 import type { VideoRatio, VideoResolution } from '@/types'
 
 const composer = useComposerStore()
 const settings = useSettingsStore()
+const { t } = useI18nStore()
 
 const isCustom = computed(() => settings.activeProfile?.kind === 'custom')
 
@@ -38,7 +40,7 @@ function stepSeed(delta: number) {
 
       <!-- Video Ratio -->
       <div class="flex flex-col">
-        <div class="text-[10px] font-sans font-bold tracking-widest text-gray-500 mb-2 uppercase">ASPECT_RATIO</div>
+        <div class="text-[10px] font-sans font-bold tracking-widest text-gray-500 mb-2 uppercase">{{ t('param.aspectRatio') }}</div>
         <div class="flex flex-wrap gap-1">
           <button
             v-for="r in ratios"
@@ -54,7 +56,7 @@ function stepSeed(delta: number) {
 
       <!-- Video Resolution -->
       <div class="flex flex-col">
-        <div class="text-[10px] font-sans font-bold tracking-widest text-gray-500 mb-2 uppercase">RESOLUTION</div>
+        <div class="text-[10px] font-sans font-bold tracking-widest text-gray-500 mb-2 uppercase">{{ t('param.resolution') }}</div>
         <div class="flex flex-wrap gap-1">
           <button
             v-for="r in resolutions"
@@ -73,7 +75,7 @@ function stepSeed(delta: number) {
     <!-- Duration Slider -->
     <div class="w-full">
       <div class="flex justify-between items-end mb-2">
-        <span class="text-[10px] font-sans font-bold tracking-widest text-gray-500 uppercase">DURATION</span>
+        <span class="text-[10px] font-sans font-bold tracking-widest text-gray-500 uppercase">{{ t('param.duration') }}</span>
         <span class="text-xs font-mono text-ak-400 font-bold">{{ composer.params.duration }}s</span>
       </div>
       <input
@@ -100,7 +102,7 @@ function stepSeed(delta: number) {
           <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
             <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.generateAudio ? 'w-full' : 'w-0'"></div>
           </div>
-          <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.generateAudio ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">AUDIO_GEN</span>
+          <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.generateAudio ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">{{ t('param.audioGen') }}</span>
         </button>
 
         <!-- Return Last Frame -->
@@ -111,7 +113,7 @@ function stepSeed(delta: number) {
           <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
             <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.returnLastFrame ? 'w-full' : 'w-0'"></div>
           </div>
-          <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.returnLastFrame ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">LAST_FRAME</span>
+          <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.returnLastFrame ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">{{ t('param.lastFrame') }}</span>
         </button>
 
         <!-- Watermark -->
@@ -122,7 +124,7 @@ function stepSeed(delta: number) {
           <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
             <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.watermark ? 'w-full' : 'w-0'"></div>
           </div>
-          <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.watermark ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">WATERMARK</span>
+          <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.watermark ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">{{ t('param.watermark') }}</span>
         </button>
       </div>
 
@@ -135,7 +137,7 @@ function stepSeed(delta: number) {
           <input
             type="number"
             :value="composer.params.seed ?? ''"
-            placeholder="RAND_SEED"
+            :placeholder="t('param.seedPlaceholder')" :aria-label="t('param.seedPlaceholder')"
             class="no-spin flex-1 min-w-0 bg-transparent text-white font-mono text-xs py-1 outline-none placeholder-gray-600 transition-colors"
             @input="composer.patchParams({ seed: ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : undefined })"
           />
