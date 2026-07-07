@@ -4,6 +4,7 @@ import { useComposerStore } from '@/stores/composer'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
+import { useI18nStore } from '@/stores/i18n'
 import PromptArea from './PromptArea.vue'
 import { ingestFile, referenceRoleFromFile } from '@/lib/asset'
 import { validateTask, validateAssets } from '@/lib/validate'
@@ -13,6 +14,7 @@ const composer = useComposerStore()
 const tasks = useTasksStore()
 const toast = useToastStore()
 const settings = useSettingsStore()
+const { t } = useI18nStore()
 
 // 素材类错误（数量/体积/时长/互斥等）伴随素材状态，实时展示
 const assetErrors = computed(() => validateAssets(composer.assets))
@@ -40,12 +42,12 @@ watch(
 async function submit() {
   // 无提示词：弹 toast 警告 + 显示错误条，不提交
   if (isPromptEmpty.value) {
-    toast.show('请输入提示词', 'error')
+    toast.show(t('toast.promptEmpty'), 'error')
     submitErrors.value = validateTask(composer.params, composer.prompt, composer.assets)
     return
   }
   if (!settings.activeProfile?.apiKey.trim()) {
-    toast.show('请先在设置中填写 API Key', 'error')
+    toast.show(t('toast.apiKeyMissing'), 'error')
     return
   }
   // 点击生成时校验全部：有错误则显示且不提交
@@ -57,9 +59,9 @@ async function submit() {
   submitErrors.value = []
   const res = await tasks.submitTask()
   if (!res.ok) {
-    toast.show(res.error ?? '提交失败', 'error')
+    toast.show(res.error ?? t('toast.submitFailed'), 'error')
   } else {
-    toast.show('已提交生成任务', 'success')
+    toast.show(t('toast.submitted'), 'success')
   }
 }
 
@@ -74,7 +76,7 @@ async function onDrop(e: DragEvent) {
       const asset = await ingestFile(file, role)
       composer.addAsset(asset)
     } catch (err) {
-      toast.show(`素材 ${file.name} 处理失败`, 'error')
+      toast.show(t('toast.assetFailed', { name: file.name }), 'error')
     }
   }
 }
@@ -93,7 +95,7 @@ function onDragOver(e: DragEvent) {
     <PromptArea />
 
     <div v-if="validationErrors.length" class="border-l-4 border-red-500 bg-red-500/10 px-4 py-3 text-xs text-red-400 font-sans tracking-wider w-full">
-      <div class="font-bold mb-1 uppercase">>> SYSTEM_CONFLICT_DETECTED</div>
+      <div class="font-bold mb-1 uppercase">>> {{ t('composer.systemConflict') }}</div>
       <div v-for="(e, i) in validationErrors" :key="i">ERR: {{ e }}</div>
     </div>
 
@@ -112,7 +114,7 @@ function onDragOver(e: DragEvent) {
             <div class="w-2 h-6 bg-ak-darker"></div>
             <div class="w-4 h-6 bg-ak-darker"></div>
           </div>
-          <span>INITIATE_RENDER</span>
+          <span>INITIATE RENDER</span>
         </div>
         <!-- Right side arrow indicator -->
         <div class="relative z-10 text-ak-darker font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">
