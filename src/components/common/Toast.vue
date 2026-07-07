@@ -9,7 +9,7 @@ const toast = useToastStore()
     <div
       v-for="item in toast.items"
       :key="item.id"
-      class="pointer-events-auto w-fit max-w-lg relative overflow-hidden bg-ak-dark/95 border shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all animate-[slide-down_0.3s_cubic-bezier(0.25,1,0.2,1)_both]"
+      class="pointer-events-auto w-fit max-w-lg relative overflow-hidden bg-ak-dark/95 border shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md transition animate-[slide-down_0.3s_cubic-bezier(0.25,1,0.2,1)_both]"
       :class="{
         'border-gray-600': item.type === 'info',
         'border-red-500/50': item.type === 'error',
@@ -49,8 +49,3 @@ const toast = useToastStore()
     </div>
   </div>
 </template>
-
-<style scoped>
-/* slide-down / eq / shrink-width keyframes 定义在全局 style.css，
-   避免 scoped style 重命名后内联 style 与 Tailwind animate 类引用失效 */
-</style>

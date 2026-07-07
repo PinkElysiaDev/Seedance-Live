@@ -67,14 +67,31 @@ export const SEEDANCE_REFERENCE_LIMITS = {
   audioTotalMaxDurationMs: 15000,
 }
 
+/** 返回模型支持的分辨率列表（fast 系列上限 720p，故不含 1080p）。 */
 export function resolutionsForModel(model: SeedanceModel): VideoResolution[] {
   const meta = MODEL_META[model]
   if (meta.maxResolution === '1080p') return ['480p', '720p', '1080p', '4K']
   return ['480p', '720p', '4K']
 }
 
+/** 返回模型支持的画幅比例（adaptive 仅非 face 模型可用）。 */
 export function ratiosForModel(model: SeedanceModel): VideoRatio[] {
-  // adaptive 仅非 face 模型可用
   const base: VideoRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
   return MODEL_META[model].face ? base : [...base, 'adaptive']
+}
+
+// 比例 → 撑高用的 paddingBottom 百分比，实现基于宽度的自适应高度
+const RATIO_PADDING_TOP: Record<VideoRatio, string> = {
+  '16:9': '56.25%',
+  '9:16': '177.77%',
+  '1:1': '100%',
+  '4:3': '75%',
+  '3:4': '133.33%',
+  '21:9': '42.85%',
+  adaptive: '56.25%',
+}
+
+/** 将视频比例转换为 padding-top 百分比，用于按宽度自适应高度的缩略图容器。 */
+export function ratioToPaddingTop(ratio: VideoRatio): string {
+  return RATIO_PADDING_TOP[ratio] ?? '56.25%'
 }

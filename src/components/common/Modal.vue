@@ -9,6 +9,7 @@ const emit = defineEmits<{ close: [] }>()
 
 <template>
   <Teleport to="body">
+    <Transition name="modal-pop">
     <div v-if="show" class="fixed inset-0 z-40 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="emit('close')" />
       <div
@@ -20,12 +21,13 @@ const emit = defineEmits<{ close: [] }>()
             <span class="w-1.5 h-4 bg-ak-400 clip-chamfer"></span>
             <h2 class="text-base font-sans italic font-bold text-white uppercase tracking-widest">{{ title }}</h2>
           </div>
-          <button class="font-mono text-gray-500 hover:text-ak-400 hover:scale-110 transition-all px-2" @click="emit('close')">[✕]</button>
+          <button class="font-mono text-gray-500 hover:text-ak-400 hover:scale-110 transition px-2" @click="emit('close')">[✕]</button>
         </div>
         <div class="p-5">
           <slot />
         </div>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>

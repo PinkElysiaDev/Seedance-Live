@@ -4,8 +4,9 @@ import { useComposerStore } from '@/stores/composer'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
+import { useI18nStore } from '@/stores/i18n'
 import PromptArea from './PromptArea.vue'
-import { ingestFile } from '@/lib/asset'
+import { ingestFile, referenceRoleFromFile } from '@/lib/asset'
 import { validateTask, validateAssets } from '@/lib/validate'
 import type { AssetRole } from '@/types'
 
@@ -13,6 +14,7 @@ const composer = useComposerStore()
 const tasks = useTasksStore()
 const toast = useToastStore()
 const settings = useSettingsStore()
+const { t } = useI18nStore()
 
 // 素材类错误（数量/体积/时长/互斥等）伴随素材状态，实时展示
 const assetErrors = computed(() => validateAssets(composer.assets))
@@ -29,7 +31,7 @@ const validationErrors = computed(() => {
 })
 
 // 提示词为空：按钮置灰（仍可点击，点击时给报错）
-const promptEmpty = computed(() => !composer.prompt.trim())
+const isPromptEmpty = computed(() => !composer.prompt.trim())
 
 // 用户修改提示词后清除点击时产生的错误，避免残留
 watch(
@@ -39,13 +41,13 @@ watch(
 
 async function submit() {
   // 无提示词：弹 toast 警告 + 显示错误条，不提交
-  if (promptEmpty.value) {
-    toast.show('请输入提示词', 'error')
+  if (isPromptEmpty.value) {
+    toast.show(t('toast.promptEmpty'), 'error')
     submitErrors.value = validateTask(composer.params, composer.prompt, composer.assets)
     return
   }
   if (!settings.activeProfile?.apiKey.trim()) {
-    toast.show('请先在设置中填写 API Key', 'error')
+    toast.show(t('toast.apiKeyMissing'), 'error')
     return
   }
   // 点击生成时校验全部：有错误则显示且不提交
@@ -57,25 +59,10 @@ async function submit() {
   submitErrors.value = []
   const res = await tasks.submitTask()
   if (!res.ok) {
-    toast.show(res.error ?? '提交失败', 'error')
+    toast.show(res.error ?? t('toast.submitFailed'), 'error')
   } else {
-    toast.show('已提交生成任务', 'success')
+    toast.show(t('toast.submitted'), 'success')
   }
-}
-
-function inferRole(file: File): AssetRole | null {
-  const kind = roleKindFromMime(file.type)
-  if (kind === 'image') return 'referenceImage'
-  if (kind === 'video') return 'referenceVideo'
-  if (kind === 'audio') return 'referenceAudio'
-  return null
-}
-
-function roleKindFromMime(mime: string): 'image' | 'video' | 'audio' | null {
-  if (mime.startsWith('image/')) return 'image'
-  if (mime.startsWith('video/')) return 'video'
-  if (mime.startsWith('audio/')) return 'audio'
-  return null
 }
 
 async function onDrop(e: DragEvent) {
@@ -83,13 +70,13 @@ async function onDrop(e: DragEvent) {
   if (!files || !files.length) return
   e.preventDefault()
   for (const file of Array.from(files)) {
-    const role = inferRole(file)
+    const role: AssetRole | null = referenceRoleFromFile(file)
     if (!role) continue
     try {
       const asset = await ingestFile(file, role)
       composer.addAsset(asset)
     } catch (err) {
-      toast.show(`素材 ${file.name} 处理失败`, 'error')
+      toast.show(t('toast.assetFailed', { name: file.name }), 'error')
     }
   }
 }
@@ -108,7 +95,7 @@ function onDragOver(e: DragEvent) {
     <PromptArea />
 
     <div v-if="validationErrors.length" class="border-l-4 border-red-500 bg-red-500/10 px-4 py-3 text-xs text-red-400 font-sans tracking-wider w-full">
-      <div class="font-bold mb-1 uppercase">>> SYSTEM_CONFLICT_DETECTED</div>
+      <div class="font-bold mb-1 uppercase">>> {{ t('composer.systemConflict') }}</div>
       <div v-for="(e, i) in validationErrors" :key="i">ERR: {{ e }}</div>
     </div>
 
@@ -116,18 +103,18 @@ function onDragOver(e: DragEvent) {
     <div class="relative">
       <button
         class="w-full relative h-16 bg-white text-ak-darker font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-ak-400 transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
-        :class="promptEmpty ? 'opacity-50 grayscale' : ''"
+        :class="isPromptEmpty ? 'opacity-50 grayscale' : ''"
         :disabled="tasks.tasks.some((t) => t.status === 'running')"
         @click="submit"
       >
         <div class="flex items-center gap-4 relative z-10">
           <!-- Progressing bars animation on hover -->
-          <div class="flex gap-1 group-hover:gap-2 transition-all">
+          <div class="flex gap-1 group-hover:gap-2 transition-[gap]">
             <div class="w-1 h-6 bg-ak-darker"></div>
             <div class="w-2 h-6 bg-ak-darker"></div>
             <div class="w-4 h-6 bg-ak-darker"></div>
           </div>
-          <span>INITIATE_RENDER</span>
+          <span>INITIATE RENDER</span>
         </div>
         <!-- Right side arrow indicator -->
         <div class="relative z-10 text-ak-darker font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">

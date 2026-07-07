@@ -1,29 +1,42 @@
 import type { AssetKind, AssetRole, StoredAsset } from '@/types'
-import { genId } from './id'
+import { generateId } from './id'
 import { hashBlob, blobToArrayBuffer, blobToDataUrl, isDirectUrl } from './blob'
 import { probeVideo, probeAudio, type VideoMeta } from './video'
 import { putBlob, putAsset, getBlob, type StoredBlob } from '@/db/repos'
 
-// 角色 → kind 映射
+/** 角色 → 素材种类映射。 */
 export function roleKind(role: AssetRole): AssetKind {
   if (role === 'referenceVideo') return 'video'
   if (role === 'referenceAudio') return 'audio'
   return 'image'
 }
 
+/** 依据 MIME 推断素材种类，无法识别时按图片处理。 */
 export function kindFromMime(mime: string): AssetKind {
   if (mime.startsWith('video/')) return 'video'
   if (mime.startsWith('audio/')) return 'audio'
   return 'image'
 }
 
-// 校验某角色的素材是否被允许（互斥由 Composer 层保证，这里只校验类型）
+/** 校验文件类型是否匹配角色（互斥由 Composer 层保证，这里只校验类型）。 */
 export function fileMatchesRole(file: File, role: AssetRole): boolean {
   const kind = kindFromMime(file.type)
   return kind === roleKind(role)
 }
 
-// 入库一个本地文件，返回 StoredAsset
+/** 依据文件 MIME 推断参考素材角色（图/视/音），无法识别时返回 null。 */
+export function referenceRoleFromFile(file: File): AssetRole | null {
+  const mime = file.type
+  if (mime.startsWith('image/')) return 'referenceImage'
+  if (mime.startsWith('video/')) return 'referenceVideo'
+  if (mime.startsWith('audio/')) return 'referenceAudio'
+  return null
+}
+
+/**
+ * 将本地文件入库：计算 blob 哈希去重、探测视频/音频元信息、写入 blobs 表，
+ * 返回引用该 blob 的 StoredAsset。
+ */
 export async function ingestFile(file: File, role: AssetRole): Promise<StoredAsset> {
   const kind = roleKind(role)
   const mime = file.type || guessMime(file.name, kind)
@@ -57,7 +70,7 @@ export async function ingestFile(file: File, role: AssetRole): Promise<StoredAss
   await putBlob(stored)
 
   const asset: StoredAsset = {
-    id: genId(),
+    id: generateId(),
     role,
     kind,
     blobId,
@@ -73,11 +86,11 @@ export async function ingestFile(file: File, role: AssetRole): Promise<StoredAss
   return asset
 }
 
-// 从公网 URL 创建素材引用（不下载，提交时直传）
+/** 从公网 URL 创建素材引用（不下载，提交时直传）。 */
 export async function ingestUrl(url: string, role: AssetRole, name = ''): Promise<StoredAsset> {
   const kind = roleKind(role)
   const asset: StoredAsset = {
-    id: genId(),
+    id: generateId(),
     role,
     kind,
     blobId: '',           // 无本地 blob
@@ -91,7 +104,10 @@ export async function ingestUrl(url: string, role: AssetRole, name = ''): Promis
   return asset
 }
 
-// 解析素材为提交给 API 的 URL：公网/asset:// 直传，否则取本地 blob 转 dataUrl
+/**
+ * 解析素材为提交给 API 的 URL：公网/asset:// 直传，
+ * 否则取本地 blob 转 dataUrl 内联进请求。
+ */
 export async function resolveAssetForApi(asset: StoredAsset): Promise<string> {
   if (asset.sourceUrl && isDirectUrl(asset.sourceUrl)) return asset.sourceUrl
   if (!asset.blobId) throw new Error(`素材 ${asset.name} 无可用的 URL 或本地数据`)

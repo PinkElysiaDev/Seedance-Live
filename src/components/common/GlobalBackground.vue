@@ -2,19 +2,22 @@
   <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-ak-darker">
     <!-- 外层：静态旋转，让网格倾斜 -->
     <div class="absolute inset-0" style="transform: rotate(-15deg)">
-      <!-- 内层：粒子被钉在网格坐标上，共享全局平移，整体像网格匀速通过画面。整体虚焦（blur） -->
-      <div
-        v-for="seal in seals"
-        :key="seal.key"
-        class="absolute flex items-center justify-center p-4 blur-[1px]"
-        :style="{
-          left: `${seal.x}px`,
-          top: `${seal.y}px`,
-          width: `${cellPx}px`,
-          height: `${cellPx}px`,
-        }"
-      >
-        <img :src="`/images/${seal.file}`" class="w-full h-full object-contain opacity-[0.13]" alt="" />
+      <!-- 平移层：rAF 每帧只更新这一个 transform，刻印本身静态布局在网格坐标上，
+           避免每帧重建数组与逐元素 style 重算 -->
+      <div ref="translateRef" class="absolute inset-0 will-change-transform">
+        <div
+          v-for="seal in seals"
+          :key="seal.key"
+          class="absolute flex items-center justify-center p-4 blur-[1px]"
+          :style="{
+            left: `${seal.left}px`,
+            top: `${seal.top}px`,
+            width: `${CELL_SIZE}px`,
+            height: `${CELL_SIZE}px`,
+          }"
+        >
+          <img :src="`/images/${seal.file}`" class="w-full h-full object-contain opacity-[0.13]" alt="" />
+        </div>
       </div>
     </div>
 
@@ -24,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, onMounted, onBeforeUnmount } from 'vue'
 
 const LOGO_FILES = [
   '0045A6E438A50352E2AF924005AC8CD6.png',
@@ -43,7 +46,7 @@ const LOGO_FILES = [
 ]
 
 // 统一刻印尺寸
-const cellPx = 220
+const CELL_SIZE = 220
 // 全局平移速度（px/ms），斜向匀速
 const SPEED_X = 0.018
 const SPEED_Y = 0.012
@@ -51,17 +54,30 @@ const SPEED_Y = 0.012
 interface Seal {
   key: string
   file: string
-  x: number
-  y: number
+  left: number
+  top: number
 }
 
-const seals = ref<Seal[]>([])
+interface Range {
+  gxMin: number
+  gxMax: number
+  gyMin: number
+  gyMax: number
+}
+
+// 刻印静态布局在网格坐标上，平移由 translateRef 的 transform 承担；
+// 故 seals 列表仅在可见网格范围变化时重建（约每 12–18s 一次），而非每帧。
+const seals = shallowRef<Seal[]>([])
+const translateRef = ref<HTMLElement | null>(null)
 // 网格坐标 → logo 文件名 的虚拟无限映射
 const grid = new Map<string, string>()
-let offX = 0
-let offY = 0
+let offsetX = 0
+let offsetY = 0
+let viewW = 0
+let viewH = 0
 let rafId = 0
 let lastTs = 0
+let lastRangeKey = ''
 
 function keyFor(gx: number, gy: number) {
   return `${gx},${gy}`
@@ -88,38 +104,29 @@ function ensureLogo(gx: number, gy: number): string {
   return f
 }
 
-function tick(ts: number) {
-  if (!lastTs) lastTs = ts
-  // 钳制 dt：页面后台/切换标签时 rAF 被节流，恢复时 dt 可能极大，
-  // 直接累加会导致刻印瞬移。限制单步最大前进量，丢弃被节流的积压时间。
-  const dt = Math.min(ts - lastTs, 50)
-  lastTs = ts
-  offX += SPEED_X * dt
-  offY += SPEED_Y * dt
+// 旋转 -15° 后视口对角扩大，留足余量避免角落露空
+function computeRange(): Range {
+  const margin = CELL_SIZE * 2
+  return {
+    gxMin: Math.floor((-offsetX - margin) / CELL_SIZE),
+    gxMax: Math.floor((viewW - offsetX + margin) / CELL_SIZE),
+    gyMin: Math.floor((-offsetY - margin) / CELL_SIZE),
+    gyMax: Math.floor((viewH - offsetY + margin) / CELL_SIZE),
+  }
+}
 
-  const viewW = window.innerWidth
-  const viewH = window.innerHeight
-  // 旋转 -15° 后视口对角扩大，留足余量避免角落露空
-  const margin = cellPx * 2
-
-  // 当前视口覆盖的网格坐标范围
-  const gxMin = Math.floor((-offX - margin) / cellPx)
-  const gxMax = Math.floor((viewW - offX + margin) / cellPx)
-  const gyMin = Math.floor((-offY - margin) / cellPx)
-  const gyMax = Math.floor((viewH - offY + margin) / cellPx)
-
+function rebuildSeals(r: Range) {
   const next: Seal[] = []
   const seen = new Set<string>()
-  for (let gy = gyMin; gy <= gyMax; gy++) {
-    for (let gx = gxMin; gx <= gxMax; gx++) {
+  for (let gy = r.gyMin; gy <= r.gyMax; gy++) {
+    for (let gx = r.gxMin; gx <= r.gxMax; gx++) {
       const k = keyFor(gx, gy)
       seen.add(k)
-      const file = ensureLogo(gx, gy)
       next.push({
         key: k,
-        file,
-        x: gx * cellPx + offX,
-        y: gy * cellPx + offY,
+        file: ensureLogo(gx, gy),
+        left: gx * CELL_SIZE,
+        top: gy * CELL_SIZE,
       })
     }
   }
@@ -128,6 +135,29 @@ function tick(ts: number) {
     if (!seen.has(k)) grid.delete(k)
   }
   seals.value = next
+}
+
+function tick(ts: number) {
+  if (!lastTs) lastTs = ts
+  // 钳制 dt：页面后台/切换标签时 rAF 被节流，恢复时 dt 可能极大，
+  // 直接累加会导致刻印瞬移。限制单步最大前进量，丢弃被节流的积压时间。
+  const dt = Math.min(ts - lastTs, 50)
+  lastTs = ts
+  offsetX += SPEED_X * dt
+  offsetY += SPEED_Y * dt
+
+  // 单元素 transform：GPU 合成，不触发 Vue 重渲染与逐元素 style 重算
+  if (translateRef.value) {
+    translateRef.value.style.transform = `translate(${offsetX}px, ${offsetY}px)`
+  }
+
+  // 仅当可见网格范围变化时才重建刻印列表
+  const r = computeRange()
+  const rangeKey = `${r.gxMin},${r.gxMax},${r.gyMin},${r.gyMax}`
+  if (rangeKey !== lastRangeKey) {
+    lastRangeKey = rangeKey
+    rebuildSeals(r)
+  }
 
   rafId = requestAnimationFrame(tick)
 }
@@ -140,13 +170,27 @@ function onVisibility() {
   }
 }
 
+function onResize() {
+  viewW = window.innerWidth
+  viewH = window.innerHeight
+  // 视口变化导致可见范围改变，下次 tick 重建
+  lastRangeKey = ''
+}
+
 onMounted(() => {
+  viewW = window.innerWidth
+  viewH = window.innerHeight
   document.addEventListener('visibilitychange', onVisibility)
+  window.addEventListener('resize', onResize)
+  const r = computeRange()
+  lastRangeKey = `${r.gxMin},${r.gxMax},${r.gyMin},${r.gyMax}`
+  rebuildSeals(r)
   rafId = requestAnimationFrame(tick)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVisibility)
+  window.removeEventListener('resize', onResize)
   cancelAnimationFrame(rafId)
 })
 </script>

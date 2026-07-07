@@ -21,11 +21,12 @@ function assetsOf(role: AssetRole): StoredAsset[] {
   return composer.assets.filter((a) => a.role === role)
 }
 
-const refAssets = computed(() => [
-  ...assetsOf('referenceImage'),
-  ...assetsOf('referenceVideo'),
-  ...assetsOf('referenceAudio')
-])
+// 跟随 assets 顺序（不按类型分组），使网格顺序 = payload 顺序，拖拽排序所见即所发
+const refAssets = computed(() =>
+  composer.assets.filter(
+    (a) => a.role === 'referenceImage' || a.role === 'referenceVideo' || a.role === 'referenceAudio',
+  ),
+)
 
 async function handleFiles(role: AssetRole, files: FileList | null, autoRole: boolean = false) {
   if (!files || !files.length) return
@@ -67,46 +68,85 @@ async function handleFiles(role: AssetRole, files: FileList | null, autoRole: bo
 function swapKeyframes() {
   const first = assetsOf('firstFrame')[0]
   const last = assetsOf('lastFrame')[0]
-
+  // 交换首尾帧：各自移除后以对方角色重新加入（仅一帧存在时退化为单方向搬移）
   if (first) {
     composer.removeAsset(first.id)
-    if (last) {
-      composer.addAsset({ ...first, role: 'lastFrame' })
-    } else {
-      composer.addAsset({ ...first, role: 'lastFrame' })
-    }
+    composer.addAsset({ ...first, role: 'lastFrame' })
   }
   if (last) {
     composer.removeAsset(last.id)
-    if (first) {
-      composer.addAsset({ ...last, role: 'firstFrame' })
-    } else {
-      composer.addAsset({ ...last, role: 'firstFrame' })
-    }
+    composer.addAsset({ ...last, role: 'firstFrame' })
   }
 }
 
 // ===== 拖拽 / 粘贴上传 =====
 // 各投放区高亮态
-const dragOver = ref<Record<string, boolean>>({})
+const isDragOver = ref<Record<string, boolean>>({})
+
+// 参考图缩略图拖拽排序：draggingId 非空表示正在拖内部素材（排序），否则为外部文件拖入（上传）
+const draggingId = ref<string | null>(null)
+const dropTargetId = ref<string | null>(null)
+
+function onAssetDragStart(a: StoredAsset, e: DragEvent) {
+  draggingId.value = a.id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    // Firefox 需 setData 才能触发后续 dragover/drop
+    e.dataTransfer.setData('text/plain', a.id)
+  }
+}
+function onAssetDragEnd() {
+  draggingId.value = null
+  dropTargetId.value = null
+}
+function onAssetDragOver(a: StoredAsset, e: DragEvent) {
+  // 仅内部拖拽时启用排序投放；外部文件交给框级 onDragOver
+  if (!draggingId.value) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dropTargetId.value = a.id
+}
+function onAssetDragLeave(a: StoredAsset, e: DragEvent) {
+  if (dropTargetId.value !== a.id) return
+  // 仅当真正离开该缩略图（而非进入其子元素）时清除，避免子元素间闪烁
+  const related = e.relatedTarget as Node | null
+  const current = e.currentTarget as Element | null
+  if (!related || !current || !current.contains(related)) dropTargetId.value = null
+}
+function onAssetDrop(a: StoredAsset, e: DragEvent) {
+  // 外部文件落到缩略图上：不拦截，冒泡到框级 onDrop 入库
+  if (!draggingId.value) return
+  e.preventDefault()
+  e.stopPropagation()
+  if (draggingId.value !== a.id) composer.swapAssets(draggingId.value, a.id)
+  draggingId.value = null
+  dropTargetId.value = null
+}
 
 // 拖入文件（支持拖到参考图框或首尾帧框）
 function onDrop(role: AssetRole, e: DragEvent, autoRole = false) {
   e.preventDefault()
-  dragOver.value[role] = false
+  isDragOver.value[role] = false
+  // 内部拖拽落到空白处：不做排序
+  if (draggingId.value) {
+    draggingId.value = null
+    dropTargetId.value = null
+    return
+  }
   const files = e.dataTransfer?.files
   if (files && files.length) handleFiles(role, files, autoRole)
 }
 
 function onDragOver(role: AssetRole, e: DragEvent) {
   e.preventDefault()
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
-  dragOver.value[role] = true
+  if (e.dataTransfer) e.dataTransfer.dropEffect = draggingId.value ? 'move' : 'copy'
+  // 仅外部文件高亮整框；内部排序时由缩略图自身指示落点
+  if (!draggingId.value) isDragOver.value[role] = true
 }
 
 function onDragLeave(role: AssetRole, e: DragEvent) {
   // 仅当离开该元素本身（而非进入子元素）时清除高亮
-  if (e.currentTarget === e.target) dragOver.value[role] = false
+  if (e.currentTarget === e.target) isDragOver.value[role] = false
 }
 
 // 全局粘贴：页面任意处粘贴文件都能入当前模式的输入框
@@ -215,7 +255,7 @@ function closeLightbox() {
       <!-- 添加框：无素材时显示占位；有素材时框内直接预览文件。整框可点击/拖拽/粘贴上传 -->
       <div
         class="w-full border border-gray-700 bg-ak-dark/80 p-4 flex flex-col gap-3 hover:border-ak-400/50 transition-colors relative min-h-[150px] cursor-pointer outline-none"
-        :class="dragOver['referenceImage'] ? 'border-ak-400 bg-ak-gray/40' : ''"
+        :class="isDragOver['referenceImage'] ? 'border-ak-400 bg-ak-gray/40' : ''"
         tabindex="0"
         @click="fileInputs['refPool']?.click()"
         @dragover="onDragOver('referenceImage', $event as DragEvent)"
@@ -241,7 +281,17 @@ function closeLightbox() {
           <div
             v-for="a in refAssets"
             :key="a.id"
-            class="relative w-24 h-24 border border-gray-700 bg-ak-darker overflow-hidden group/asset"
+            draggable="true"
+            class="relative w-24 h-24 border border-gray-700 bg-ak-darker overflow-hidden group/asset cursor-grab transition"
+            :class="{
+              'opacity-40': draggingId === a.id,
+              'ring-2 ring-ak-400': dropTargetId === a.id,
+            }"
+            @dragstart="onAssetDragStart(a, $event as DragEvent)"
+            @dragend="onAssetDragEnd"
+            @dragover="onAssetDragOver(a, $event as DragEvent)"
+            @dragleave="onAssetDragLeave(a, $event as DragEvent)"
+            @drop="onAssetDrop(a, $event as DragEvent)"
           >
             <!-- 预览内容 -->
             <button
@@ -249,8 +299,8 @@ function closeLightbox() {
               class="w-full h-full flex items-center justify-center cursor-zoom-in"
               @click.stop="openLightbox(a)"
             >
-              <img v-if="a.kind === 'image'" :src="previewUrls[a.id]" class="w-full h-full object-cover" :alt="a.name" />
-              <video v-else-if="a.kind === 'video'" :src="previewUrls[a.id]" class="w-full h-full object-cover" muted />
+              <img v-if="a.kind === 'image'" :src="previewUrls[a.id]" loading="lazy" draggable="false" class="w-full h-full object-cover" :alt="a.name" />
+              <video v-else-if="a.kind === 'video'" :src="previewUrls[a.id]" draggable="false" class="w-full h-full object-cover" muted />
               <div v-else-if="a.kind === 'audio'" class="w-full h-full flex flex-col items-center justify-center gap-1 text-ak-400">
                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-3c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" /></svg>
                 <span class="text-[9px] font-mono uppercase">AUDIO</span>
@@ -297,7 +347,7 @@ function closeLightbox() {
       <!-- Start Frame Slot -->
       <div
         class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
-        :class="dragOver['firstFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
+        :class="isDragOver['firstFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
         tabindex="0"
         @click="fileInputs['firstFrame']?.click()"
         @dragover="onDragOver('firstFrame', $event as DragEvent)"
@@ -310,6 +360,7 @@ function closeLightbox() {
         <div class="flex-1 flex items-center justify-center p-2">
           <div v-if="assetsOf('firstFrame')[0] && previewUrls[assetsOf('firstFrame')[0].id]" class="relative max-h-[120px] max-w-full">
             <img
+              loading="lazy"
               :src="previewUrls[assetsOf('firstFrame')[0].id]"
               class="max-h-[120px] max-w-full object-contain cursor-zoom-in"
               :alt="assetsOf('firstFrame')[0].name"
@@ -342,7 +393,7 @@ function closeLightbox() {
 
       <!-- 中间切换按钮：平时透明无外圈，hover 后出现圆形不透明底 -->
       <button
-        class="self-center z-20 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full border border-transparent bg-transparent text-gray-500/70 hover:text-ak-400 hover:bg-ak-gray hover:border-ak-400 hover:shadow-lg hover:scale-110 transition-all duration-200"
+        class="self-center z-20 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full border border-transparent bg-transparent text-gray-500/70 hover:text-ak-400 hover:bg-ak-gray hover:border-ak-400 hover:shadow-lg hover:scale-110 transition duration-200"
         @click="swapKeyframes"
         title="Swap Frames"
       >
@@ -352,7 +403,7 @@ function closeLightbox() {
       <!-- End Frame Slot -->
       <div
         class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
-        :class="dragOver['lastFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
+        :class="isDragOver['lastFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
         tabindex="0"
         @click="fileInputs['lastFrame']?.click()"
         @dragover="onDragOver('lastFrame', $event as DragEvent)"
@@ -364,6 +415,7 @@ function closeLightbox() {
         <div class="flex-1 flex items-center justify-center p-2">
           <div v-if="assetsOf('lastFrame')[0] && previewUrls[assetsOf('lastFrame')[0].id]" class="relative max-h-[120px] max-w-full">
             <img
+              loading="lazy"
               :src="previewUrls[assetsOf('lastFrame')[0].id]"
               class="max-h-[120px] max-w-full object-contain cursor-zoom-in"
               :alt="assetsOf('lastFrame')[0].name"
@@ -397,6 +449,7 @@ function closeLightbox() {
 
     <!-- 放大预览 Lightbox（ak 主题，图片/视频/音频） -->
     <Teleport to="body">
+      <Transition name="modal-pop">
       <div v-if="lightboxAsset" class="fixed inset-0 z-50 flex items-center justify-center p-8" @click="closeLightbox">
         <div class="absolute inset-0 bg-black/85 backdrop-blur-sm"></div>
         <div class="relative z-10 max-w-[90vw] max-h-[90vh] flex flex-col items-center gap-3" @click.stop>
@@ -423,6 +476,7 @@ function closeLightbox() {
           </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

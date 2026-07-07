@@ -17,7 +17,7 @@ const ALL_RESOLUTIONS: VideoResolution[] = ['480p', '720p', '1080p', '4K']
 const resolutions = computed(() => (isCustom.value ? ALL_RESOLUTIONS : resolutionsForModel(composer.params.model)))
 const ratios = computed(() => (isCustom.value ? ALL_RATIOS : ratiosForModel(composer.params.model)))
 
-function randomSeed() {
+function randomizeSeed() {
   composer.patchParams({ seed: Math.floor(Math.random() * 1_000_000) })
 }
 function clearSeed() {
@@ -43,7 +43,7 @@ function stepSeed(delta: number) {
           <button
             v-for="r in ratios"
             :key="r"
-            class="font-mono text-xs px-3 py-1 transition-all border border-transparent"
+            class="font-mono text-xs px-3 py-1 transition-colors border border-transparent"
             :class="composer.params.ratio === r ? 'bg-ak-400 text-ak-darker font-bold' : 'bg-ak-gray text-gray-400 hover:text-white hover:border-ak-400/50'"
             @click="composer.patchParams({ ratio: r })"
           >
@@ -59,7 +59,7 @@ function stepSeed(delta: number) {
           <button
             v-for="r in resolutions"
             :key="r"
-            class="font-mono text-xs px-3 py-1 transition-all border border-transparent"
+            class="font-mono text-xs px-3 py-1 transition-colors border border-transparent"
             :class="composer.params.resolution === r ? 'bg-ak-400 text-ak-darker font-bold' : 'bg-ak-gray text-gray-400 hover:text-white hover:border-ak-400/50'"
             @click="composer.patchParams({ resolution: r })"
           >
@@ -98,7 +98,7 @@ function stepSeed(delta: number) {
           @click="composer.patchParams({ generateAudio: !composer.params.generateAudio })"
         >
           <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
-            <div class="absolute top-0 left-0 h-full bg-ak-400 transition-all duration-300" :class="composer.params.generateAudio ? 'w-full' : 'w-0'"></div>
+            <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.generateAudio ? 'w-full' : 'w-0'"></div>
           </div>
           <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.generateAudio ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">AUDIO_GEN</span>
         </button>
@@ -109,7 +109,7 @@ function stepSeed(delta: number) {
           @click="composer.patchParams({ returnLastFrame: !composer.params.returnLastFrame })"
         >
           <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
-            <div class="absolute top-0 left-0 h-full bg-ak-400 transition-all duration-300" :class="composer.params.returnLastFrame ? 'w-full' : 'w-0'"></div>
+            <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.returnLastFrame ? 'w-full' : 'w-0'"></div>
           </div>
           <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.returnLastFrame ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">LAST_FRAME</span>
         </button>
@@ -120,7 +120,7 @@ function stepSeed(delta: number) {
           @click="composer.patchParams({ watermark: !composer.params.watermark })"
         >
           <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
-            <div class="absolute top-0 left-0 h-full bg-ak-400 transition-all duration-300" :class="composer.params.watermark ? 'w-full' : 'w-0'"></div>
+            <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.watermark ? 'w-full' : 'w-0'"></div>
           </div>
           <span class="font-sans font-bold text-xs tracking-wider uppercase transition-colors" :class="composer.params.watermark ? 'text-ak-400' : 'text-gray-500 group-hover:text-white'">WATERMARK</span>
         </button>
@@ -129,7 +129,7 @@ function stepSeed(delta: number) {
       <!-- Seed Input: 单独占据一行 -->
       <div class="flex flex-col gap-2 w-full">
         <div class="w-full h-1 bg-gray-800 relative overflow-hidden">
-          <div class="absolute top-0 left-0 h-full bg-ak-400 transition-all duration-300" :class="composer.params.seed != null ? 'w-full' : 'w-0'"></div>
+          <div class="absolute top-0 left-0 h-full bg-ak-400 transition-[width] duration-300" :class="composer.params.seed != null ? 'w-full' : 'w-0'"></div>
         </div>
         <div class="flex items-center w-full gap-1 border-b border-gray-700 focus-within:border-ak-400 transition-colors">
           <input
@@ -149,7 +149,7 @@ function stepSeed(delta: number) {
             </button>
           </div>
           <!-- 骰子（随机种子）：明日方舟风格 SVG -->
-          <button class="text-gray-500 hover:text-ak-400 transition-colors px-1 flex items-center" @click="randomSeed" title="GENERATE_RANDOM" aria-label="random">
+          <button class="text-gray-500 hover:text-ak-400 transition-colors px-1 flex items-center" @click="randomizeSeed" title="GENERATE_RANDOM" aria-label="random">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2" />
               <circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none" />

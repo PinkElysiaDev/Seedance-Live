@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import type { VideoTask } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
-import { useComposerStore } from '@/stores/composer'
-import { useToastStore } from '@/stores/toast'
 import Modal from '@/components/common/Modal.vue'
 import TaskChain from './TaskChain.vue'
 import { MODEL_META } from '@/config/models'
-import { saveUrl } from '@/lib/download'
+import { useTicker } from '@/composables/useTicker'
+import { useTaskMedia, useTaskActions } from '@/composables/useTaskItem'
 
 const props = defineProps<{ show: boolean; taskId: string | null }>()
 const emit = defineEmits<{ close: []; select: [id: string] }>()
 
 const tasks = useTasksStore()
-const composer = useComposerStore()
-const toast = useToastStore()
-
-const videoUrl = ref<string | null>(null)
-const coverUrl = ref<string | null>(null)
-const lastFrameUrl = ref<string | null>(null)
 
 const task = computed<VideoTask | undefined>(() =>
   props.taskId ? tasks.tasks.find((t) => t.id === props.taskId) : undefined,
@@ -28,72 +21,30 @@ const chain = computed<VideoTask[]>(() =>
   props.taskId ? tasks.getTaskChain(props.taskId) : [],
 )
 
+// 仅运行中时计时才跳动，避免弹窗常开时无意义轮询
+const now = useTicker(() => task.value?.status === 'running')
+
 const elapsedSec = computed(() => {
   if (!task.value) return 0
-  const end = task.value.finishedAt ?? Date.now()
+  const end = task.value.finishedAt ?? now.value
   return Math.max(0, Math.floor((end - task.value.createdAt) / 1000))
 })
 
 const modelLabel = computed(() => (task.value ? MODEL_META[task.value.params.model]?.label : ''))
 
-async function loadMedia() {
-  videoUrl.value = null
-  coverUrl.value = null
-  lastFrameUrl.value = null
-  if (!task.value) return
-  coverUrl.value = await tasks.resolveCoverUrl(task.value)
-  if (task.value.status === 'succeeded') {
-    videoUrl.value = await tasks.resolveVideoUrl(task.value)
-  }
-  if (task.value.lastFrameImageId) {
-    lastFrameUrl.value = await tasks.resolveLastFrameUrl(task.value)
-  }
-}
+const { videoUrl, coverUrl, lastFrameUrl } = useTaskMedia(() => task.value)
+const actions = useTaskActions(() => task.value, videoUrl)
+const { download, continueFrame, retry } = actions
 
-watch(() => [props.taskId, task.value?.status, task.value?.videoBlobId], loadMedia, { immediate: true })
-
-onUnmounted(() => {
-  if (videoUrl.value && videoUrl.value.startsWith('blob:')) {
-    URL.revokeObjectURL(videoUrl.value)
-  }
-})
-
-async function download() {
-  if (!task.value) return
-  if (videoUrl.value && videoUrl.value.startsWith('blob:')) {
-    const a = document.createElement('a')
-    a.href = videoUrl.value
-    a.download = `seedance-${task.value.id.slice(0, 8)}.mp4`
-    a.click()
-  } else if (task.value.videoUrl) {
-    await saveUrl(task.value.videoUrl, `seedance-${task.value.id.slice(0, 8)}.mp4`)
-  }
-}
-
-async function continueFrame() {
-  if (!task.value) return
-  const res = await tasks.continueFromTask(task.value.id)
-  if (!res.ok) toast.show(res.error ?? '续帧失败', 'error')
-  else toast.show('已创建续帧任务', 'success')
-}
-
+// 复用配置 / 删除后需要关闭详情弹窗
 function reuseConfig() {
-  if (!task.value) return
-  composer.setPrompt(task.value.prompt)
-  composer.patchParams({ ...task.value.params })
-  toast.show('已载入配置到输入区', 'info')
+  actions.reuseConfig()
   emit('close')
-}
-
-async function retry() {
-  if (!task.value) return
-  await tasks.retryTask(task.value.id)
-  toast.show('已重新提交', 'success')
 }
 
 async function remove() {
   if (!task.value) return
-  await tasks.removeTask(task.value.id)
+  await actions.remove()
   emit('close')
 }
 

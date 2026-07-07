@@ -3,7 +3,7 @@
     <!-- Split Screen Layout -->
 
     <!-- Left Side: Controls 贯穿式条幅（普通 flex 子项，位于 main 居中区域左侧 = 中间偏左，高度贯通） -->
-    <div class="w-[450px] flex-shrink-0 h-full flex flex-col bg-ak-dark/95 backdrop-blur-md border-r border-gray-800 p-8 overflow-y-auto hide-scrollbar z-10 shadow-[10px_0_30px_rgba(0,0,0,0.85)] transition-all duration-500 ease-out hover:shadow-[14px_0_40px_rgba(0,0,0,0.9)]">
+    <div class="w-[450px] flex-shrink-0 h-full flex flex-col bg-ak-dark/95 backdrop-blur-md border-r border-gray-800 p-8 overflow-y-auto hide-scrollbar z-10 shadow-[10px_0_30px_rgba(0,0,0,0.85)] transition-shadow duration-500 ease-out hover:shadow-[14px_0_40px_rgba(0,0,0,0.9)]">
 
       <!-- 顶部留白：让出 header 浮层 brand 高度，标题统一由 App.vue header 显示 -->
       <div class="h-[72px] flex-shrink-0"></div>
@@ -13,17 +13,17 @@
         <div class="font-sans font-bold text-gray-500 tracking-widest text-xs mb-1 uppercase">CURRENT_PROVIDER</div>
         <div
           class="flex items-center justify-between group cursor-pointer hover:text-ak-400 transition-colors"
-          @click="providerOpen = !providerOpen"
+          @click="isProviderOpen = !isProviderOpen"
         >
           <span class="font-sans font-black text-white text-xl tracking-wider group-hover:text-ak-400 transition-colors uppercase truncate">
             {{ activeProfile?.name || 'NO_PROVIDER' }} // <span class="font-mono font-normal text-xs text-gray-500 group-hover:text-ak-400/80 transition-colors normal-case tracking-normal">{{ modelLabel }}</span>
           </span>
-          <span class="font-mono text-gray-500 transition-transform" :class="{ 'rotate-180': providerOpen }">▼</span>
+          <span class="font-mono text-gray-500 transition-transform" :class="{ 'rotate-180': isProviderOpen }">▼</span>
         </div>
 
         <!-- 渠道商切换下拉 -->
         <div
-          v-if="providerOpen"
+          v-if="isProviderOpen"
           class="absolute left-0 right-0 top-full mt-2 z-30 bg-ak-dark border border-gray-700 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
         >
           <div class="px-4 py-2 font-sans font-bold text-gray-500 tracking-widest text-[10px] uppercase border-b border-gray-800">
@@ -46,7 +46,7 @@
           <router-link
             to="/settings"
             class="block px-4 py-3 border-t border-gray-800 font-sans font-bold text-[10px] tracking-widest uppercase text-gray-400 hover:text-ak-400 transition-colors"
-            @click="providerOpen = false"
+            @click="isProviderOpen = false"
           >
             + CONFIGURE_PROVIDERS
           </router-link>
@@ -63,14 +63,14 @@
            <div class="font-sans font-bold text-gray-500 tracking-widest text-xs uppercase">RENDER_MODE</div>
            <div class="flex bg-ak-gray p-1 w-full gap-1">
              <button
-               class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-all"
+               class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-colors"
                :class="activeMode === 'REF_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
                @click="composer.setActiveMode('REF_MODE')"
              >
                REFERENCE
              </button>
              <button
-               class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-all"
+               class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-colors"
                :class="activeMode === 'KEYFRAME_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
                @click="composer.setActiveMode('KEYFRAME_MODE')"
              >
@@ -100,7 +100,7 @@
           <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-ak-400 z-20"></div>
 
           <!-- Idle State Summary Content -->
-          <div v-if="!isRunning && !isCompleted" class="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 p-8" :class="{ 'opacity-0 scale-110 pointer-events-none blur-sm': isRunning }">
+          <div v-if="!isRunning" class="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 p-8">
             <div class="w-16 h-1 bg-ak-400 mb-6"></div>
             <h2 class="font-sans font-black text-4xl text-white tracking-widest uppercase mb-4 text-center drop-shadow-md">
               WAITING_FOR_DATA
@@ -135,15 +135,6 @@
             </div>
             <div class="font-mono text-white tracking-widest text-sm">SYNCHRONIZING CORE...</div>
           </div>
-
-          <!-- Video Player State (Placeholder) -->
-          <div v-if="isCompleted" class="absolute inset-0 bg-black">
-            <div class="absolute top-4 left-4 font-mono text-xs text-ak-400 bg-ak-dark/80 px-2 py-1 z-10">RENDER_COMPLETE</div>
-            <!-- Video element would go here, bound to task output -->
-            <div class="w-full h-full flex items-center justify-center text-gray-600">
-              <span class="font-sans text-2xl tracking-widest">[ VIDEO PLAYER ]</span>
-            </div>
-          </div>
         </div>
 
       </div>
@@ -170,10 +161,7 @@ const settings = useSettingsStore()
 // 渲染模式持久化在 composer store，跨页面保留；用 storeToRefs 保持响应式
 const { activeMode } = storeToRefs(composer)
 
-// 假设状态，你可以根据实际 tasksStore 修改
 const isRunning = computed(() => tasksStore.tasks.some(t => t.status === 'running'))
-// 为了演示，假设计划完成后会有最近一条成功任务，并且可以在此播放
-const isCompleted = computed(() => false) // 结合实际逻辑实现播放器，现在保持为 false 测试排版
 
 // 当前渠道商与切换
 const activeProfile = computed(() => settings.activeProfile)
@@ -184,7 +172,7 @@ const modelLabel = computed(() => {
   if (override) return override
   return MODEL_META[composer.params.model]?.label ?? composer.params.model
 })
-const providerOpen = ref(false)
+const isProviderOpen = ref(false)
 
 // 是否存在按需展示的可选配置（开关开启或 seed 已设）
 const hasOptionalParams = computed(() =>
@@ -196,15 +184,15 @@ const hasOptionalParams = computed(() =>
 
 function selectProvider(id: string) {
   settings.setActiveProfile(id)
-  providerOpen.value = false
+  isProviderOpen.value = false
 }
 
 // 点击下拉外部关闭
 function onDocClick(e: MouseEvent) {
-  if (!providerOpen.value) return
+  if (!isProviderOpen.value) return
   const target = e.target as HTMLElement | null
   if (target && !target.closest('.provider-dropdown-root')) {
-    providerOpen.value = false
+    isProviderOpen.value = false
   }
 }
 onMounted(() => document.addEventListener('click', onDocClick))
