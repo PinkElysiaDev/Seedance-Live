@@ -25,8 +25,10 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Exo 2"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+        // Noto Sans SC 作为中文回退：浏览器按字形依次匹配，拉丁字符走 Exo 2 / JetBrains Mono，
+        // 汉字回落到 Noto Sans SC，避免系统字体（雅黑/苹方）造成的风格漂移（item 6）。
+        sans: ['"Exo 2"', '"Noto Sans SC"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Noto Sans SC"', '"Fira Code"', 'monospace'],
       },
       backgroundImage: {
         'caution-cyan': 'repeating-linear-gradient(45deg, #00E5FF, #00E5FF 10px, transparent 10px, transparent 20px)',

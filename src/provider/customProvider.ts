@@ -4,6 +4,7 @@ import { getByPath } from '@/lib/path'
 import { renderTemplate, type TemplateVars } from '@/lib/template'
 import { resolveAssetForApi } from '@/lib/asset'
 import { log } from '@/lib/logger'
+import { useI18nStore } from '@/stores/i18n'
 import type { PollResult, SubmitContext, VideoProvider } from './types'
 
 // 把素材分组解析为 URL/dataUrl 数组，用于模板 vars
@@ -79,14 +80,15 @@ export function normalizeUrl(url: string): string {
 
 export const customProvider: VideoProvider = {
   async submit(ctx: SubmitContext): Promise<{ remoteTaskId: string }> {
+    const { t } = useI18nStore()
     const { task, assets, profile, proxy, signal } = ctx
     const tpl = profile.custom as CustomTemplate | undefined
-    if (!tpl) throw new Error('自定义接口缺少请求模板')
+    if (!tpl) throw new Error(t('error.customTemplateMissing'))
 
     const arrays = await resolveAssetArrays(assets)
 
     if (arrays.images.length > 0 && !/\{\{\s*(images|firstFrameImages|lastFrameImages|referenceImages)\s*\}\}/.test(tpl.submitBody)) {
-      log.warn('submit', `检测到 ${arrays.images.length} 张图片素材，但 body 模板未引用 {{images}}，图片将不会传给 API。请在 body 中添加 "images": {{images}}`, undefined, task.id)
+      log.warn('submit', t('log.imagesNotReferenced', { n: arrays.images.length }), undefined, task.id)
     }
 
     const vars = buildVars(ctx, arrays)
@@ -95,7 +97,7 @@ export const customProvider: VideoProvider = {
     const body = renderTemplate(tpl.submitBody, vars, 'json')
 
     const bodyPreview = JSON.stringify(safeParseJson(body)).replace(/data:[^",}\]]+/g, 'data:…(redacted)')
-    log.info('submit', `提交自定义任务 → ${url}`, { body: bodyPreview }, task.id)
+    log.info('submit', t('log.submitCustom', { url }), { body: bodyPreview }, task.id)
 
     const res = await httpFetch<unknown>(url, {
       method: tpl.submitMethod,
@@ -108,14 +110,14 @@ export const customProvider: VideoProvider = {
       taskId: task.id,
     })
 
-    log.debug('submit', '提交原始响应', res, task.id)
+    log.debug('submit', t('log.rawSubmitResponse'), res, task.id)
 
     const taskId = getByPath(res, tpl.taskIdPath)
     if (typeof taskId !== 'string' || !taskId) {
-      log.error('submit', '提交响应未包含任务 ID', { path: tpl.taskIdPath, response: res }, task.id)
-      throw new Error('提交响应未包含任务 ID')
+      log.error('submit', t('error.noTaskIdInResponse'), { path: tpl.taskIdPath, response: res }, task.id)
+      throw new Error(t('error.noTaskIdInResponse'))
     }
-    log.info('submit', `已入队 taskId=${taskId}`, undefined, task.id)
+    log.info('submit', t('log.enqueuedLocal', { id: taskId }), undefined, task.id)
     ctx.onEnqueued(taskId)
     return { remoteTaskId: taskId }
   },
@@ -126,8 +128,9 @@ export const customProvider: VideoProvider = {
     signal: AbortSignal,
     proxy?: ProxyConfig,
   ): Promise<PollResult> {
+    const { t } = useI18nStore()
     const tpl = profile.custom as CustomTemplate | undefined
-    if (!tpl) throw new Error('自定义接口缺少请求模板')
+    if (!tpl) throw new Error(t('error.customTemplateMissing'))
 
     const vars: TemplateVars = {
       prompt: '', model: profile.model ?? '', ratio: '', resolution: '', duration: 0,
@@ -147,19 +150,19 @@ export const customProvider: VideoProvider = {
       logCategory: 'poll',
     })
 
-    log.debug('poll', '轮询原始响应', res)
+    log.debug('poll', t('log.rawPollResponse'), res)
 
     const statusRaw = getByPath(res, tpl.statusPath)
     const status = String(statusRaw ?? '').toLowerCase()
-    log.info('poll', `状态提取：statusPath="${tpl.statusPath}" → raw=${JSON.stringify(statusRaw)} → normalized="${status}"`)
+    log.info('poll', t('log.statusExtract', { path: tpl.statusPath, raw: JSON.stringify(statusRaw), status }))
     if (tpl.successValues.some((v) => v.toLowerCase() === status)) {
       const videoUrl = getByPath(res, tpl.videoUrlPath)
       if (typeof videoUrl !== 'string' || !videoUrl) {
-        log.error('poll', '任务成功但未返回视频 URL', { path: tpl.videoUrlPath, response: res })
-        return { status: 'failed', error: '任务成功但未返回视频 URL' }
+        log.error('poll', t('error.noVideoUrl'), { path: tpl.videoUrlPath, response: res })
+        return { status: 'failed', error: t('error.noVideoUrl') }
       }
       const lastFrameUrl = tpl.lastFrameUrlPath ? (getByPath(res, tpl.lastFrameUrlPath) as string | undefined) : undefined
-      log.info('poll', `任务成功 videoUrl=${videoUrl.slice(0, 80)}`, undefined)
+      log.info('poll', t('log.successVideoUrl', { url: videoUrl.slice(0, 80) }), undefined)
       return { status: 'succeeded', videoUrl, lastFrameUrl }
     }
     if (tpl.failureValues.some((v) => v.toLowerCase() === status)) {
@@ -172,8 +175,8 @@ export const customProvider: VideoProvider = {
       if (raw.updated_at) details.updated_at = raw.updated_at
       if (raw.status) details.remote_status = raw.status
       if (raw.error != null) details.error = raw.error
-      log.warn('poll', `任务失败 status=${status}`, { error: errMsg, response: JSON.stringify(res) })
-      return { status: 'failed', error: errMsg || `视频生成${status || '失败'}`, details: Object.keys(details).length > 0 ? details : undefined }
+      log.warn('poll', t('log.taskFailedStatus', { status }), { error: errMsg, response: JSON.stringify(res) })
+      return { status: 'failed', error: errMsg || t('error.genFailed', { status }), details: Object.keys(details).length > 0 ? details : undefined }
     }
     const progressRaw = tpl.progressPath ? getByPath(res, tpl.progressPath) : undefined
     return { status: 'running', progress: parseProgress(progressRaw) }

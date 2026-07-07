@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
 import { validateTask } from '@/lib/validate'
 import { defaultParams } from '@/config/options'
 import type { StoredAsset, VideoParams } from '@/types'
+
+// validateTask/validateAssets 内部经 i18n store 翻译文案，需活跃 Pinia
+beforeEach(() => setActivePinia(createPinia()))
 
 function asset(overrides: Partial<StoredAsset>): StoredAsset {
   return {

@@ -2,6 +2,7 @@ import { HttpError, type ProxyConfig } from '@/types'
 import { DEFAULT_TIMEOUT_SEC } from '@/config/options'
 import { applyProxy } from './proxy'
 import { log, redactHeaders } from '@/lib/logger'
+import { useI18nStore } from '@/stores/i18n'
 
 export interface HttpOptions {
   method?: 'GET' | 'POST' | 'DELETE' | 'PUT'
@@ -37,6 +38,7 @@ function linkAbortSignals(signal: AbortSignal, timeoutMs: number): { signal: Abo
 }
 
 export async function httpFetch<T = unknown>(url: string, opts: HttpOptions = {}): Promise<T> {
+  const { t } = useI18nStore()
   const method = opts.method ?? 'GET'
   const timeoutMs = (opts.timeoutSec ?? DEFAULT_TIMEOUT_SEC) * 1000
   const targetUrl = opts.proxy ? applyProxy(url, opts.proxy) : url
@@ -58,14 +60,14 @@ export async function httpFetch<T = unknown>(url: string, opts: HttpOptions = {}
   } catch (err) {
     clearTimer(timer)
     if (signal.aborted && signal.reason?.name === 'TimeoutError') {
-      log.error(cat, `请求超时 ${method} ${url}`, undefined, opts.taskId)
-      throw new HttpError('请求超时', 'timeout')
+      log.error(cat, t('http.logTimeout', { method, url }), undefined, opts.taskId)
+      throw new HttpError(t('http.timeout'), 'timeout')
     }
     if (opts.signal?.aborted) {
-      throw new HttpError('请求已取消', 'abort')
+      throw new HttpError(t('http.aborted'), 'abort')
     }
-    log.error(cat, `网络错误 ${method} ${url}`, err instanceof Error ? err.message : String(err), opts.taskId)
-    throw new HttpError(err instanceof Error ? err.message : '网络请求失败', 'network')
+    log.error(cat, t('http.logNetworkError', { method, url }), err instanceof Error ? err.message : String(err), opts.taskId)
+    throw new HttpError(err instanceof Error ? err.message : t('http.networkFailed'), 'network')
   }
   clearTimer(timer)
 
@@ -85,12 +87,12 @@ export async function httpFetch<T = unknown>(url: string, opts: HttpOptions = {}
 
   if (opts.responseType === 'blob') {
     const blob = await res.blob()
-    log.debug(cat, `响应 ${res.status} (blob ${blob.size}B)`, undefined, opts.taskId)
+    log.debug(cat, t('http.logResponseBlob', { status: res.status, n: blob.size }), undefined, opts.taskId)
     return blob as unknown as T
   }
   if (opts.responseType === 'text') {
     const txt = await res.text()
-    log.debug(cat, `响应 ${res.status}`, txt.slice(0, 1000), opts.taskId)
+    log.debug(cat, t('http.logResponse', { status: res.status }), txt.slice(0, 1000), opts.taskId)
     return txt as unknown as T
   }
   // 默认按 JSON 解析；若服务器返回非 JSON（如 HTML 错误页），兜底读取文本并抛带上下文的错误
@@ -98,11 +100,11 @@ export async function httpFetch<T = unknown>(url: string, opts: HttpOptions = {}
   if (!contentType.includes('application/json')) {
     const txt = await res.text().catch(() => '')
     const preview = txt.slice(0, 500)
-    log.error(cat, `响应不是 JSON（content-type: ${contentType || '未知'}）`, preview, opts.taskId)
-    throw new HttpError(`响应不是 JSON（可能 URL/鉴权错误，状态 ${res.status}）: ${preview}`, 'http', res.status)
+    log.error(cat, t('http.notJson', { ct: contentType || '未知' }), preview, opts.taskId)
+    throw new HttpError(t('http.notJsonError', { status: res.status, preview }), 'http', res.status)
   }
   const json = await res.json()
-  log.debug(cat, `响应 ${res.status}`, json, opts.taskId)
+  log.debug(cat, t('http.logResponse', { status: res.status }), json, opts.taskId)
   return json as T
 }
 

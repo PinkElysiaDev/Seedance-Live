@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
 import { parseProgress, normalizeUrl } from '@/provider/customProvider'
 import { migrateProfile } from '@/stores/settings'
+
+// migrateProfile 补默认 custom 时经 i18n store 取名，需活跃 Pinia
+beforeEach(() => setActivePinia(createPinia()))
 
 describe('parseProgress', () => {
   it('数字直接返回', () => {

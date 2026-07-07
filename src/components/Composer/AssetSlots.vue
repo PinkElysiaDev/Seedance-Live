@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useComposerStore } from '@/stores/composer'
 import { useToastStore } from '@/stores/toast'
+import { useI18nStore } from '@/stores/i18n'
 import { ingestFile, fileMatchesRole } from '@/lib/asset'
 import { SEEDANCE_REFERENCE_LIMITS } from '@/config/models'
 import { getBlob } from '@/db/repos'
@@ -10,6 +11,7 @@ import type { AssetRole, StoredAsset } from '@/types'
 
 const composer = useComposerStore()
 const toast = useToastStore()
+const { t } = useI18nStore()
 
 const props = defineProps<{
   mode: 'REF_MODE' | 'KEYFRAME_MODE'
@@ -40,7 +42,7 @@ async function handleFiles(role: AssetRole, files: FileList | null, autoRole: bo
     }
 
     if (!fileMatchesRole(file, targetRole)) {
-      toast.show(`${file.name} 类型不匹配`, 'error')
+      toast.show(t('toast.assetTypeMismatch', { name: file.name }), 'error')
       continue
     }
 
@@ -50,7 +52,7 @@ async function handleFiles(role: AssetRole, files: FileList | null, autoRole: bo
     if (targetRole === 'referenceAudio') max = SEEDANCE_REFERENCE_LIMITS.audios
 
     if (assetsOf(targetRole).length >= max) {
-      toast.show(`${targetRole} 已达上限`, 'error')
+      toast.show(t('toast.assetRoleMax', { role: targetRole }), 'error')
       continue
     }
 
@@ -58,7 +60,7 @@ async function handleFiles(role: AssetRole, files: FileList | null, autoRole: bo
       const asset = await ingestFile(file, targetRole)
       composer.addAsset(asset)
     } catch (err) {
-      toast.show(`素材 ${file.name} 处理失败：${err instanceof Error ? err.message : String(err)}`, 'error')
+      toast.show(t('toast.assetFailedDetailed', { name: file.name, msg: err instanceof Error ? err.message : String(err) }), 'error')
     }
   }
 
@@ -160,7 +162,7 @@ function isTextTarget(el: EventTarget | null): boolean {
 async function fillKeyframesInOrder(files: FileList) {
   for (const file of Array.from(files)) {
     if (!fileMatchesRole(file, 'firstFrame')) {
-      toast.show(`${file.name} 不是图片，已跳过`, 'error')
+      toast.show(t('toast.keyframeNotImage', { name: file.name }), 'error')
       continue
     }
     let targetRole: AssetRole | null = null
@@ -171,7 +173,7 @@ async function fillKeyframesInOrder(files: FileList) {
       const asset = await ingestFile(file, targetRole)
       composer.addAsset(asset)
     } catch (err) {
-      toast.show(`素材 ${file.name} 处理失败：${err instanceof Error ? err.message : String(err)}`, 'error')
+      toast.show(t('toast.assetFailedDetailed', { name: file.name, msg: err instanceof Error ? err.message : String(err) }), 'error')
     }
   }
 }
@@ -272,8 +274,8 @@ function closeLightbox() {
             <div class="w-8 h-1 bg-ak-400"></div>
             <div class="w-2 h-1 bg-ak-400"></div>
           </div>
-          <div class="text-white font-sans font-black tracking-[0.2em] uppercase text-sm">ADD_REFERENCE</div>
-          <p class="text-gray-500 font-sans text-xs uppercase tracking-wider group-hover:text-ak-400 transition-colors">Import Image / Video / Audio</p>
+          <div class="text-white font-sans font-black tracking-[0.2em] uppercase text-sm">{{ t('asset.addReference') }}</div>
+          <p class="text-gray-500 font-sans text-xs uppercase tracking-wider group-hover:text-ak-400 transition-colors">{{ t('asset.importHint') }}</p>
         </button>
 
         <!-- 有素材时：框内预览网格 -->
@@ -314,7 +316,7 @@ function closeLightbox() {
             <button
               class="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20"
               @click.stop="composer.removeAsset(a.id)"
-              title="移除"
+              :title="t('title.removeAsset')"
             >✕</button>
             <!-- 文件名 -->
             <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="a.name">{{ a.name }}</span>
@@ -326,7 +328,7 @@ function closeLightbox() {
             @click.stop="fileInputs['refPool']?.click()"
           >
             <span class="text-2xl font-light leading-none">+</span>
-            <span class="text-[9px] font-sans tracking-widest uppercase">ADD</span>
+            <span class="text-[9px] font-sans tracking-widest uppercase">{{ t('asset.add') }}</span>
           </button>
         </div>
 
@@ -354,7 +356,7 @@ function closeLightbox() {
         @dragleave="onDragLeave('firstFrame', $event as DragEvent)"
         @drop="onDrop('firstFrame', $event as DragEvent)"
       >
-        <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">START_FRAME</div>
+        <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">{{ t('asset.startFrame') }}</div>
 
         <!-- 预览/占位 -->
         <div class="flex-1 flex items-center justify-center p-2">
@@ -370,15 +372,15 @@ function closeLightbox() {
             <button
               class="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm"
               @click.stop="composer.removeAsset(assetsOf('firstFrame')[0].id)"
-              title="移除"
+              :title="t('title.removeAsset')"
             >✕</button>
             <!-- 文件名横幅（与参考图模式一致） -->
             <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('firstFrame')[0].name">{{ assetsOf('firstFrame')[0].name }}</span>
           </div>
-          <div v-else-if="assetsOf('firstFrame')[0]" class="text-gray-500 text-xs font-mono">加载中...</div>
+          <div v-else-if="assetsOf('firstFrame')[0]" class="text-gray-500 text-xs font-mono">{{ t('placeholder.loading') }}</div>
           <div v-else class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-ak-400 transition-colors">
             <span class="text-2xl font-light leading-none">+</span>
-            <span class="text-[10px] font-sans uppercase tracking-widest">Start Image</span>
+            <span class="text-[10px] font-sans uppercase tracking-widest">{{ t('asset.startImage') }}</span>
           </div>
         </div>
 
@@ -410,7 +412,7 @@ function closeLightbox() {
         @dragleave="onDragLeave('lastFrame', $event as DragEvent)"
         @drop="onDrop('lastFrame', $event as DragEvent)"
       >
-        <div class="absolute top-0 right-0 bg-gray-600 text-white font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">END_FRAME</div>
+        <div class="absolute top-0 right-0 bg-gray-600 text-white font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">{{ t('asset.endFrame') }}</div>
 
         <div class="flex-1 flex items-center justify-center p-2">
           <div v-if="assetsOf('lastFrame')[0] && previewUrls[assetsOf('lastFrame')[0].id]" class="relative max-h-[120px] max-w-full">
@@ -425,15 +427,15 @@ function closeLightbox() {
             <button
               class="absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm"
               @click.stop="composer.removeAsset(assetsOf('lastFrame')[0].id)"
-              title="移除"
+              :title="t('title.removeAsset')"
             >✕</button>
             <!-- 文件名横幅（与参考图模式一致） -->
             <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('lastFrame')[0].name">{{ assetsOf('lastFrame')[0].name }}</span>
           </div>
-          <div v-else-if="assetsOf('lastFrame')[0]" class="text-gray-500 text-xs font-mono">加载中...</div>
+          <div v-else-if="assetsOf('lastFrame')[0]" class="text-gray-500 text-xs font-mono">{{ t('placeholder.loading') }}</div>
           <div v-else class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-white transition-colors">
             <span class="text-2xl font-light leading-none">+</span>
-            <span class="text-[10px] font-sans uppercase tracking-widest">End Image</span>
+            <span class="text-[10px] font-sans uppercase tracking-widest">{{ t('asset.endImage') }}</span>
           </div>
         </div>
 

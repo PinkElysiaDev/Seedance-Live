@@ -5,11 +5,12 @@
       <!-- Title -->
       <div class="flex items-end justify-between px-8">
         <h1 class="text-4xl md:text-6xl font-sans font-black text-white uppercase tracking-widest flex items-center gap-4">
+          <!-- 装饰性双语标题：青色 SYS 前缀 + 白色 SETTINGS 主体（恢复 git 历史样式，不随语言切换，item 3） -->
           <span class="text-ak-400 font-light">SYS</span>SETTINGS
         </h1>
         <div class="font-sans text-sm tracking-[0.2em] text-gray-500 hidden md:flex items-center gap-2">
           <div class="w-12 h-px bg-gray-700"></div>
-          [SYS.CORE.CFG.OVERRIDE]
+          [Core Config Override]
         </div>
       </div>
 
@@ -31,7 +32,7 @@
             <div class="p-8 flex-1 flex flex-col justify-end z-10 relative">
               <div class="font-sans text-[10px] tracking-widest text-ak-400 mb-2 opacity-0 group-hover:opacity-100 transition-[opacity,transform] duration-500 ease-out translate-y-4 group-hover:translate-y-0">{{ p.num }} // {{ p.accent }}</div>
               <h2 class="text-3xl font-sans font-black text-gray-400 group-hover:text-white transition-colors tracking-widest uppercase mb-1 drop-shadow-md">{{ p.title }}</h2>
-              <p class="text-sm font-sans tracking-wider text-gray-600 group-hover:text-gray-300 transition-colors uppercase">{{ p.subtitle }}</p>
+              <p class="text-sm font-sans tracking-wider text-gray-600 group-hover:text-gray-300 transition-colors uppercase">{{ t(p.subKey) }}</p>
             </div>
           </div>
         </div>
@@ -70,14 +71,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import SettingsFormContent from '@/components/Settings/SettingsFormContent.vue'
+import { useI18nStore } from '@/stores/i18n'
 
 type PillarTab = 'provider' | 'proxy' | 'ai' | 'general'
 
-const PILLARS: Array<{ tab: PillarTab; img: string; num: string; accent: string; title: string; subtitle: string }> = [
-  { tab: 'provider', img: '8D0EE95EEACC026829ACA09CFC2CBDA2.png', num: '01', accent: 'CONFIGURE', title: 'PROVIDER', subtitle: 'API Key & Endpoint' },
-  { tab: 'proxy', img: '751D9D83F676527556FFD8943753D774.png', num: '02', accent: 'NETWORK', title: 'PROXY_NET', subtitle: 'Network Routing' },
-  { tab: 'ai', img: '6C6896C912242C8931465D5AAE86C055.png', num: '03', accent: 'ENGINE', title: 'AI_ASSIST', subtitle: 'LLM Parsing Engine' },
-  { tab: 'general', img: '8370D828038E08C64EBE4339BC8B2DCB.png', num: '04', accent: 'CORE', title: 'GENERAL', subtitle: 'Behavior & Data' },
+const { t } = useI18nStore()
+
+// 四个竖条：title/accent 为装饰性英文（不切换），subKey 走 i18n 随语言切换（item 1）。
+const PILLARS: Array<{ tab: PillarTab; img: string; num: string; title: string; accent: string; subKey: string }> = [
+  { tab: 'provider', img: '8D0EE95EEACC026829ACA09CFC2CBDA2.png', num: '01', title: 'PROVIDER', accent: 'CONFIGURE', subKey: 'pillar.providerSub' },
+  { tab: 'proxy', img: '751D9D83F676527556FFD8943753D774.png', num: '02', title: 'PROXY_NET', accent: 'NETWORK', subKey: 'pillar.proxySub' },
+  { tab: 'ai', img: '6C6896C912242C8931465D5AAE86C055.png', num: '03', title: 'AI_ASSIST', accent: 'ENGINE', subKey: 'pillar.aiSub' },
+  { tab: 'general', img: '8370D828038E08C64EBE4339BC8B2DCB.png', num: '04', title: 'GENERAL', accent: 'CORE', subKey: 'pillar.generalSub' },
 ]
 
 const expandedPillar = ref<PillarTab | null>(null)
@@ -90,7 +95,7 @@ function closePillar() {
   expandedPillar.value = null
 }
 
-function getTabLabel(tab: string | null) {
+function getTabLabel(tab: string | null): string {
   const pillar = PILLARS.find((p) => p.tab === tab)
   return pillar?.title ?? 'SETTINGS'
 }
