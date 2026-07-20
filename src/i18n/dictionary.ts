@@ -15,6 +15,12 @@ export const DICTIONARY: Record<string, DictEntry> = {
   'lang.rawZh': { zh: '中', en: 'ZH' },
   'lang.rawEn': { zh: '英', en: 'EN' },
 
+  // ===== 顶部页面导航标签（随语言切换，单一标签） =====
+  'nav.index': { zh: '首页', en: 'INDEX' },
+  'nav.archive': { zh: '历史', en: 'ARCHIVE' },
+  'nav.system': { zh: '设置', en: 'SYSTEM' },
+  'nav.terminal': { zh: '终端', en: 'TERMINAL' },
+
   // ===== 校验错误（validate.ts）=====
   'validate.promptEmpty': { zh: '提示词不能为空', en: 'Prompt cannot be empty' },
   'validate.promptTooLong': { zh: '提示词不能超过 {n} 字符', en: 'Prompt cannot exceed {n} characters' },
@@ -326,4 +332,21 @@ export const DICTIONARY: Record<string, DictEntry> = {
   'log.expand': { zh: '[+] 展开', en: '[+] EXPAND' },
   'log.collapse': { zh: '[-] 折叠', en: '[-] COLLAPSE' },
   'log.view': { zh: '> 查看', en: '> VIEW' },
+
+  // ===== 主题系统 =====
+  // 主题名称（双语）；装饰性英文主名仍硬编码于 themes.ts，这里仅用于设置页副标题与 tooltip
+  'theme.sakura-pearl': { zh: '樱粉协议', en: 'Sakura Pearl' },
+  'theme.ark-cyan': { zh: '刻印青', en: 'Ark Cyan' },
+  'theme.sectionTitle': { zh: '视觉协议', en: 'Visual Protocol' },
+  'theme.selectTheme': { zh: '选择主题协议', en: 'Select Theme Protocol' },
+  'theme.cycleTooltip': { zh: '切换主题 / CYCLE THEME', en: 'Cycle Theme' },
+  'theme.sealSet': { zh: '刻印组', en: 'Sigil Set' },
+  'theme.selectSealSet': { zh: '选择刻印组', en: 'Select Sigil Set' },
+  'theme.transition': { zh: '切换仪式动效', en: 'Transition Ritual' },
+  'theme.transitionHint': { zh: '切换主题时播放充能与冲击波动画', en: 'Play charge & shockwave animation on theme switch' },
+  'theme.sealSetLabel.elysia': { zh: '爱莉西雅刻印', en: 'Elysa Sigil' },
+  'theme.sealSetLabel.sigil-core': { zh: '核心符文', en: 'Core Sigil' },
+  'theme.sealSetLabel.ember-glyphs': { zh: '烬文', en: 'Ember Glyph' },
+  'theme.sealSetLabel.void-marks': { zh: '虚刻印', en: 'Void Mark' },
+  'theme.sealSetLabel.all': { zh: '全部', en: 'All' },
 }

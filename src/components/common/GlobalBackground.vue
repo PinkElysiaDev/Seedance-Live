@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-ak-darker">
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" :style="{ backgroundColor: 'var(--th-bg-base)' }">
     <!-- 外层：静态旋转，让网格倾斜 -->
     <div class="absolute inset-0" style="transform: rotate(-15deg)">
       <!-- 平移层：rAF 每帧只更新这一个 transform，刻印本身静态布局在网格坐标上，
@@ -16,34 +16,30 @@
             height: `${CELL_SIZE}px`,
           }"
         >
-          <img :src="`/images/${seal.file}`" class="w-full h-full object-contain opacity-[0.13]" alt="" />
+          <img :src="`/images/${seal.file}`" class="w-full h-full object-contain" :style="sealImgStyle" alt="" />
         </div>
       </div>
     </div>
 
-    <!-- 四周暗、中心亮净的聚光蒙版（中心透出底色，四周压暗；中心亮区刻印几乎不可见） -->
-    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(10,10,10,0)_0%,_rgba(10,10,10,0.35)_35%,_rgba(10,10,10,0.85)_75%,_rgba(10,10,10,0.98)_100%)]"></div>
+    <!-- 四周压暗、中心净的聚光蒙版：颜色由主题变量驱动（暗主题=黑，白粉主题=淡粉白） -->
+    <div
+      class="absolute inset-0"
+      :style="{
+        background:
+          'radial-gradient(ellipse at center, var(--th-vignette-0) 0%, var(--th-vignette-40) 40%, var(--th-vignette-75) 75%, var(--th-vignette-100) 100%)',
+      }"
+    ></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, onMounted, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 
-const LOGO_FILES = [
-  '0045A6E438A50352E2AF924005AC8CD6.png',
-  '0DC1EC47FF0C98CB05C822117A8466E7.png',
-  '0FFFD6CE6535DD94DDA65146AFFD4F1E.png',
-  '44F6292244CA64CD0BBBE1A9AC0C1B14.png',
-  '544F3C8B40DA985E49589B31161C2EB4.png',
-  '5A6BAAD1513625C2967A532B43D68F13.png',
-  '6C6896C912242C8931465D5AAE86C055.png',
-  '751D9D83F676527556FFD8943753D774.png',
-  '8370D828038E08C64EBE4339BC8B2DCB.png',
-  '84FA97D8FCDCBFF1B44861AA86C5585A.png',
-  '8D0EE95EEACC026829ACA09CFC2CBDA2.png',
-  'A4268490D351FE94386990EAA38864E0.png',
-  'E2EDDC5F82A3F30CBEC89604BC9C5945.png',
-]
+const theme = useThemeStore()
+
+// 当前刻印组文件列表（主题切换时联动）
+const LOGO_POOL = computed(() => theme.sealFiles)
 
 // 统一刻印尺寸
 const CELL_SIZE = 220
@@ -79,19 +75,31 @@ let rafId = 0
 let lastTs = 0
 let lastRangeKey = ''
 
+// 刻印图片样式：透明度、混合模式、阴影滤镜跟随主题。
+// 白粉主题：normal blend + 较高 opacity + 粉色 drop-shadow，让浅色线稿以柔光水印浮现于白底。
+// 沿用原本刻印效果（不反相/不染色），仅靠阴影提供可读性。
+const sealImgStyle = computed(() => ({
+  opacity: `var(--th-seal-opacity)`,
+  mixBlendMode: `var(--th-seal-blend)` as 'multiply' | 'screen' | 'normal',
+  filter: `var(--th-seal-filter)`,
+}))
+
 function keyFor(gx: number, gy: number) {
   return `${gx},${gy}`
 }
 
 // 为某网格点选 logo：排除正左、正上邻居已用类型，保证相邻不同
 function pickLogo(gx: number, gy: number): string {
+  const pool = LOGO_POOL.value
+  if (!pool.length) return ''
   const left = grid.get(keyFor(gx - 1, gy))
   const up = grid.get(keyFor(gx, gy - 1))
   const forbidden = new Set<string>()
   if (left) forbidden.add(left)
   if (up) forbidden.add(up)
-  const pool = LOGO_FILES.filter((f) => !forbidden.has(f))
-  return pool[Math.floor(Math.random() * pool.length)]
+  const avail = pool.filter((f) => !forbidden.has(f))
+  const choices = avail.length ? avail : pool
+  return choices[Math.floor(Math.random() * choices.length)]
 }
 
 function ensureLogo(gx: number, gy: number): string {
@@ -99,9 +107,9 @@ function ensureLogo(gx: number, gy: number): string {
   let f = grid.get(k)
   if (!f) {
     f = pickLogo(gx, gy)
-    grid.set(k, f)
+    if (f) grid.set(k, f)
   }
-  return f
+  return f ?? ''
 }
 
 // 旋转 -15° 后视口对角扩大，留足余量避免角落露空
@@ -122,12 +130,9 @@ function rebuildSeals(r: Range) {
     for (let gx = r.gxMin; gx <= r.gxMax; gx++) {
       const k = keyFor(gx, gy)
       seen.add(k)
-      next.push({
-        key: k,
-        file: ensureLogo(gx, gy),
-        left: gx * CELL_SIZE,
-        top: gy * CELL_SIZE,
-      })
+      const file = ensureLogo(gx, gy)
+      if (!file) continue
+      next.push({ key: k, file, left: gx * CELL_SIZE, top: gy * CELL_SIZE })
     }
   }
   // 回收视口外不再需要的网格点（限制 Map 无限增长）
@@ -176,6 +181,15 @@ function onResize() {
   // 视口变化导致可见范围改变，下次 tick 重建
   lastRangeKey = ''
 }
+
+// 刻印组切换时：清空网格映射，强制下次 tick 重建为新刻印组（实现 cross-fade 效果）
+watch(
+  () => theme.sealSetId,
+  () => {
+    grid.clear()
+    lastRangeKey = ''
+  },
+)
 
 onMounted(() => {
   viewW = window.innerWidth

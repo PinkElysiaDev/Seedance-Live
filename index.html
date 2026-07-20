@@ -12,6 +12,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
   </head>
   <body>
+    <script>
+      // 主题预应用：在 Vue 挂载前读取 localStorage，写入 <html data-theme>，
+      // 避免首屏闪烁（FOUC）。值与 src/stores/theme.ts 保持一致。
+      (function () {
+        try {
+          var raw = localStorage.getItem('seedance-live:theme');
+          var p = raw ? JSON.parse(raw) : null;
+          var id = p && (p.themeId === 'ark-cyan') ? 'ark-cyan' : 'sakura-pearl';
+          document.documentElement.setAttribute('data-theme', id);
+        } catch (e) {}
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
