@@ -10,6 +10,9 @@ import { TEMPLATE_VARS } from '@/lib/template'
 import { log } from '@/lib/logger'
 import AiConfigModal from './AiConfigModal.vue'
 import ToggleRow from './ToggleRow.vue'
+import ThemePicker from './ThemePicker.vue'
+import SealSetPicker from './SealSetPicker.vue'
+import { useThemeStore } from '@/stores/theme'
 
 const props = defineProps<{ tab: 'provider' | 'proxy' | 'ai' | 'general' }>()
 const emit = defineEmits<{ close: [] }>()
@@ -20,6 +23,7 @@ const settings = useSettingsStore()
 const toast = useToastStore()
 const tasks = useTasksStore()
 const logs = useLogsStore()
+const theme = useThemeStore()
 
 const profile = ref(settings.activeProfile)
 const isAiModalOpen = ref(false)
@@ -208,153 +212,153 @@ async function onImportFile(e: Event) {
   <div>
     <!-- 供应商 -->
     <div v-if="props.tab === 'provider'" class="space-y-6">
-      <div class="flex flex-wrap items-center gap-3 bg-ak-dark border border-gray-800 p-3">
+      <div class="flex flex-wrap items-center gap-3 bg-th-bg-panel border border-th-border p-3">
         <select
           :value="settings.activeProfile?.id"
-          class="flex-1 min-w-[200px] bg-ak-darker border border-gray-800 text-white font-mono text-sm px-3 py-2 outline-none focus:border-ak-400 focus:shadow-[0_0_8px_rgba(0,229,255,0.3)] transition"
+          class="flex-1 min-w-[200px] bg-th-bg-base border border-th-border text-th-text-primary font-mono text-sm px-3 py-2 outline-none focus:border-th-accent transition"
           @change="selectProfile(($event.target as HTMLSelectElement).value)"
         >
-          <option v-for="p in settings.settings.profiles" :key="p.id" :value="p.id" class="bg-ak-darker">{{ p.name }} [{{ p.kind === 'seedance' ? t('form.officialMode') : t('form.customTemplateMode') }}]</option>
+          <option v-for="p in settings.settings.profiles" :key="p.id" :value="p.id" class="bg-th-bg-base">{{ p.name }} [{{ p.kind === 'seedance' ? t('form.officialMode') : t('form.customTemplateMode') }}]</option>
         </select>
-        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:border-ak-400 hover:text-ak-400 font-mono text-xs px-4 py-2 transition-colors shadow-sm" @click="addSeedance">+ {{ t('form.addOfficial') }}</button>
-        <button class="bg-ak-dark border border-gray-800 text-gray-400 hover:border-ak-400 hover:text-ak-400 font-mono text-xs px-4 py-2 transition-colors shadow-sm" @click="addCustom">+ {{ t('form.addCustom') }}</button>
-        <button class="bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-ak-darker font-mono text-xs px-4 py-2 transition-colors shadow-sm" @click="removeCurrent">{{ t('form.purge') }}</button>
+        <button class="bg-th-bg-panel border border-th-border text-th-text-secondary hover:border-th-accent hover:text-th-accent font-mono text-xs px-4 py-2 transition-colors" @click="addSeedance">+ {{ t('form.addOfficial') }}</button>
+        <button class="bg-th-bg-panel border border-th-border text-th-text-secondary hover:border-th-accent hover:text-th-accent font-mono text-xs px-4 py-2 transition-colors" @click="addCustom">+ {{ t('form.addCustom') }}</button>
+        <button class="bg-th-error/15 border border-th-error/30 text-th-error hover:bg-th-error hover:text-th-on-accent font-mono text-xs px-4 py-2 transition-colors" @click="removeCurrent">{{ t('form.purge') }}</button>
       </div>
 
       <template v-if="profile">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <label class="block flex flex-col gap-2">
-            <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.profileName') }} //</span>
-            <input :value="profile.name" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ name: ($event.target as HTMLInputElement).value })" />
+            <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.profileName') }} //</span>
+            <input :value="profile.name" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchProfile({ name: ($event.target as HTMLInputElement).value })" />
           </label>
           <label class="block flex flex-col gap-2">
-            <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.baseEndpointUrl') }} //</span>
-            <input :value="profile.baseUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ baseUrl: ($event.target as HTMLInputElement).value })" />
+            <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.baseEndpointUrl') }} //</span>
+            <input :value="profile.baseUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchProfile({ baseUrl: ($event.target as HTMLInputElement).value })" />
           </label>
           <label class="block md:col-span-2 flex flex-col gap-2">
-            <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.authToken') }} //</span>
-            <input :value="profile.apiKey" type="password" placeholder="Bearer token" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ apiKey: ($event.target as HTMLInputElement).value })" />
+            <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.authToken') }} //</span>
+            <input :value="profile.apiKey" type="password" placeholder="Bearer token" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchProfile({ apiKey: ($event.target as HTMLInputElement).value })" />
           </label>
           <label v-if="profile.kind === 'custom'" class="block md:col-span-2 flex flex-col gap-2">
-            <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.modelOverride') }} //</span>
-            <input :value="profile.model" placeholder="e.g. doubao-seedance-1-0-pro-250528" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchProfile({ model: ($event.target as HTMLInputElement).value })" />
+            <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.modelOverride') }} //</span>
+            <input :value="profile.model" placeholder="e.g. doubao-seedance-1-0-pro-250528" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchProfile({ model: ($event.target as HTMLInputElement).value })" />
           </label>
         </div>
 
-        <div class="flex flex-wrap items-center gap-4 pt-6 border-t border-gray-800 mt-6">
-          <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group" @click.prevent="testConnection">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
+        <div class="flex flex-wrap items-center gap-4 pt-6 border-t border-th-border mt-6">
+          <button class="relative bg-th-accent text-th-on-accent hover:bg-th-accent-dim font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group" @click.prevent="testConnection">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-th-on-accent group-hover:h-4 transition-[height] duration-300"></span>
             {{ t('form.initiateTestSeq') }}
           </button>
-          <button v-if="profile.kind === 'custom'" class="relative border border-ak-400/50 bg-ak-400/10 text-ak-400 font-mono text-sm pl-10 pr-6 py-2.5 hover:bg-ak-400 hover:text-ak-darker transition-colors flex items-center group" @click.prevent="isAiModalOpen = true">
+          <button v-if="profile.kind === 'custom'" class="relative border border-th-accent/50 bg-th-accent/10 text-th-accent font-mono text-sm pl-10 pr-6 py-2.5 hover:bg-th-accent hover:text-th-on-accent transition-colors flex items-center group" @click.prevent="isAiModalOpen = true">
             <span class="absolute left-4 top-1/2 -translate-y-1/2 animate-pulse">✨</span>
             {{ t('form.aiParseDocs') }}
           </button>
-          <span class="text-xs font-mono text-gray-500 ml-auto border border-gray-800 bg-ak-darker px-3 py-1">{{ profile.kind === 'seedance' ? `// ${t('form.officialMode')}` : `// ${t('form.customTemplateMode')}` }}</span>
+          <span class="text-xs font-mono text-th-text-muted ml-auto border border-th-border bg-th-bg-base px-3 py-1">{{ profile.kind === 'seedance' ? `// ${t('form.officialMode')}` : `// ${t('form.customTemplateMode')}` }}</span>
         </div>
 
         <!-- 自定义模板 -->
-        <div v-if="profile.kind === 'custom' && profile.custom" class="mt-8 space-y-8 border-l-2 border-ak-400/50 bg-ak-darker/30 p-6 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+        <div v-if="profile.kind === 'custom' && profile.custom" class="mt-8 space-y-8 border-l-2 border-th-accent/50 bg-th-bg-base/30 p-6" :style="{ boxShadow: 'inset 0 0 20px var(--th-overlay)' }">
           <div class="space-y-6">
-            <div class="flex items-center gap-3 border-b border-ak-400/20 pb-2">
-               <div class="w-2 h-2 bg-ak-400 shadow-[0_0_8px_rgba(0,229,255,0.4)]"></div>
-               <div class="text-sm font-sans italic font-bold text-ak-400 tracking-widest">{{ t('form.submitCfg') }} //</div>
+            <div class="flex items-center gap-3 border-b border-th-accent/20 pb-2">
+               <div class="w-2 h-2 bg-th-accent"></div>
+               <div class="text-sm font-sans italic font-bold text-th-accent tracking-widest">{{ t('form.submitCfg') }} //</div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <label class="block md:col-span-2 flex flex-col gap-2">
-                <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.submitUrl') }}</span>
-                <input :value="profile.custom.submitUrl" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-colors" @input="patchCustom({ submitUrl: ($event.target as HTMLInputElement).value })" />
+                <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.submitUrl') }}</span>
+                <input :value="profile.custom.submitUrl" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ submitUrl: ($event.target as HTMLInputElement).value })" />
               </label>
               <label class="block flex flex-col gap-2">
-                <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.httpMethod') }}</span>
-                <select :value="profile.custom.submitMethod" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 outline-none transition-colors" @change="patchCustom({ submitMethod: ($event.target as HTMLSelectElement).value as 'POST' })">
-                  <option value="POST" class="bg-ak-darker">POST</option>
+                <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.httpMethod') }}</span>
+                <select :value="profile.custom.submitMethod" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition-colors" @change="patchCustom({ submitMethod: ($event.target as HTMLSelectElement).value as 'POST' })">
+                  <option value="POST" class="bg-th-bg-base">POST</option>
                 </select>
               </label>
             </div>
-            <div class="bg-ak-dark/50 p-4 border-l border-gray-800">
+            <div class="bg-th-bg-panel/50 p-4 border-l border-th-border">
               <div class="flex items-center justify-between mb-4">
-                <span class="text-xs font-mono text-gray-500">{{ t('form.headersPayload') }} //</span>
-                <button class="text-xs font-mono text-ak-400 hover:text-white flex items-center gap-1" @click="addSubmitHeader"><span class="text-lg leading-none">+</span> {{ t('form.addHeader') }}</button>
+                <span class="text-xs font-mono text-th-text-muted">{{ t('form.headersPayload') }} //</span>
+                <button class="text-xs font-mono text-th-accent hover:text-th-text-primary flex items-center gap-1" @click="addSubmitHeader"><span class="text-lg leading-none">+</span> {{ t('form.addHeader') }}</button>
               </div>
               <div class="space-y-3">
-                <div v-for="h in submitHeaders" :key="h.k" class="flex gap-4 items-end border-b border-dashed border-gray-800 pb-3">
+                <div v-for="h in submitHeaders" :key="h.k" class="flex gap-4 items-end border-b border-dashed border-th-border pb-3">
                   <div class="w-1/3 flex flex-col">
-                    <input :value="h.k" placeholder="Key" class="w-full bg-transparent text-white font-mono text-sm outline-none placeholder-gray-600 focus:text-ak-400 transition-colors" @input="h.k = ($event.target as HTMLInputElement).value; updateSubmitHeaderField()" />
+                    <input :value="h.k" placeholder="Key" class="w-full bg-transparent text-th-text-primary font-mono text-sm outline-none placeholder-th-text-muted focus:text-th-accent transition-colors" @input="h.k = ($event.target as HTMLInputElement).value; updateSubmitHeaderField()" />
                   </div>
-                  <div class="flex-1 flex flex-col border-l border-gray-800 pl-4">
-                    <input :value="h.v" placeholder="Value" class="w-full bg-transparent text-white font-mono text-sm outline-none placeholder-gray-600 focus:text-ak-400 transition-colors" @input="h.v = ($event.target as HTMLInputElement).value; updateSubmitHeaderField()" />
+                  <div class="flex-1 flex flex-col border-l border-th-border pl-4">
+                    <input :value="h.v" placeholder="Value" class="w-full bg-transparent text-th-text-primary font-mono text-sm outline-none placeholder-th-text-muted focus:text-th-accent transition-colors" @input="h.v = ($event.target as HTMLInputElement).value; updateSubmitHeaderField()" />
                   </div>
-                  <button class="text-gray-500 hover:text-red-500 font-mono text-sm px-2 pb-0.5 transition-colors" :title="t('form.deleteHeader')" @click="delSubmitHeader(h.k)">[-]</button>
+                  <button class="text-th-text-muted hover:text-th-error font-mono text-sm px-2 pb-0.5 transition-colors" :title="t('form.deleteHeader')" @click="delSubmitHeader(h.k)">[-]</button>
                 </div>
               </div>
             </div>
             <label class="block flex flex-col gap-2">
-              <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.bodyTemplate') }} //</span>
-              <textarea :value="profile.custom.submitBody" rows="8" class="w-full bg-ak-dark/80 border border-gray-800 text-ak-400 font-mono text-xs p-4 focus:border-ak-400 outline-none transition-colors shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]" @input="patchCustom({ submitBody: ($event.target as HTMLTextAreaElement).value })" />
+              <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.bodyTemplate') }} //</span>
+              <textarea :value="profile.custom.submitBody" rows="8" class="w-full bg-th-bg-panel/80 border border-th-border text-th-accent font-mono text-xs p-4 focus:border-th-accent outline-none transition-colors" :style="{ boxShadow: 'inset 0 2px 10px var(--th-overlay)' }" @input="patchCustom({ submitBody: ($event.target as HTMLTextAreaElement).value })" />
             </label>
           </div>
 
-          <div class="space-y-6 pt-6 border-t border-gray-800">
-            <div class="flex items-center gap-3 border-b border-ak-400/20 pb-2">
-               <div class="w-2 h-2 bg-ak-400 shadow-[0_0_8px_rgba(0,229,255,0.4)]"></div>
-               <div class="text-sm font-sans italic font-bold text-ak-400 tracking-widest">{{ t('form.pollCfg') }} //</div>
+          <div class="space-y-6 pt-6 border-t border-th-border">
+            <div class="flex items-center gap-3 border-b border-th-accent/20 pb-2">
+               <div class="w-2 h-2 bg-th-accent"></div>
+               <div class="text-sm font-sans italic font-bold text-th-accent tracking-widest">{{ t('form.pollCfg') }} //</div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <label class="block md:col-span-2 flex flex-col gap-2">
-                <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.pollUrl') }}</span>
-                <input :value="profile.custom.pollUrl" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition-colors" @input="patchCustom({ pollUrl: ($event.target as HTMLInputElement).value })" />
+                <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.pollUrl') }}</span>
+                <input :value="profile.custom.pollUrl" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ pollUrl: ($event.target as HTMLInputElement).value })" />
               </label>
               <label class="block flex flex-col gap-2">
-                <span class="text-xs font-mono text-ak-400 block tracking-wider">{{ t('form.httpMethod') }}</span>
-                <select :value="profile.custom.pollMethod" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 outline-none transition-colors" @change="patchCustom({ pollMethod: ($event.target as HTMLSelectElement).value as 'GET' })">
-                  <option value="GET" class="bg-ak-darker">GET</option>
+                <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.httpMethod') }}</span>
+                <select :value="profile.custom.pollMethod" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition-colors" @change="patchCustom({ pollMethod: ($event.target as HTMLSelectElement).value as 'GET' })">
+                  <option value="GET" class="bg-th-bg-base">GET</option>
                 </select>
               </label>
             </div>
-            <div class="bg-ak-dark/50 p-4 border-l border-gray-800">
+            <div class="bg-th-bg-panel/50 p-4 border-l border-th-border">
               <div class="flex items-center justify-between mb-4">
-                <span class="text-xs font-mono text-gray-500">{{ t('form.headersPayload') }} //</span>
-                <button class="text-xs font-mono text-ak-400 hover:text-white flex items-center gap-1" @click="addPollHeader"><span class="text-lg leading-none">+</span> {{ t('form.addHeader') }}</button>
+                <span class="text-xs font-mono text-th-text-muted">{{ t('form.headersPayload') }} //</span>
+                <button class="text-xs font-mono text-th-accent hover:text-th-text-primary flex items-center gap-1" @click="addPollHeader"><span class="text-lg leading-none">+</span> {{ t('form.addHeader') }}</button>
               </div>
               <div class="space-y-3">
-                <div v-for="h in pollHeaders" :key="h.k" class="flex gap-4 items-end border-b border-dashed border-gray-800 pb-3">
+                <div v-for="h in pollHeaders" :key="h.k" class="flex gap-4 items-end border-b border-dashed border-th-border pb-3">
                   <div class="w-1/3 flex flex-col">
-                    <input :value="h.k" placeholder="Key" class="w-full bg-transparent text-white font-mono text-sm outline-none placeholder-gray-600 focus:text-ak-400 transition-colors" @input="h.k = ($event.target as HTMLInputElement).value; updatePollHeaderField()" />
+                    <input :value="h.k" placeholder="Key" class="w-full bg-transparent text-th-text-primary font-mono text-sm outline-none placeholder-th-text-muted focus:text-th-accent transition-colors" @input="h.k = ($event.target as HTMLInputElement).value; updatePollHeaderField()" />
                   </div>
-                  <div class="flex-1 flex flex-col border-l border-gray-800 pl-4">
-                    <input :value="h.v" placeholder="Value" class="w-full bg-transparent text-white font-mono text-sm outline-none placeholder-gray-600 focus:text-ak-400 transition-colors" @input="h.v = ($event.target as HTMLInputElement).value; updatePollHeaderField()" />
+                  <div class="flex-1 flex flex-col border-l border-th-border pl-4">
+                    <input :value="h.v" placeholder="Value" class="w-full bg-transparent text-th-text-primary font-mono text-sm outline-none placeholder-th-text-muted focus:text-th-accent transition-colors" @input="h.v = ($event.target as HTMLInputElement).value; updatePollHeaderField()" />
                   </div>
-                  <button class="text-gray-500 hover:text-red-500 font-mono text-sm px-2 pb-0.5 transition-colors" :title="t('form.deleteHeader')" @click="delPollHeader(h.k)">[-]</button>
+                  <button class="text-th-text-muted hover:text-th-error font-mono text-sm px-2 pb-0.5 transition-colors" :title="t('form.deleteHeader')" @click="delPollHeader(h.k)">[-]</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="space-y-6 pt-6 border-t border-gray-800">
-             <div class="flex items-center gap-3 border-b border-ak-400/20 pb-2">
-               <div class="w-2 h-2 bg-ak-400 shadow-[0_0_8px_rgba(0,229,255,0.4)]"></div>
-               <div class="text-sm font-sans italic font-bold text-ak-400 tracking-widest">{{ t('form.responsePaths') }} //</div>
+          <div class="space-y-6 pt-6 border-t border-th-border">
+             <div class="flex items-center gap-3 border-b border-th-accent/20 pb-2">
+               <div class="w-2 h-2 bg-th-accent"></div>
+               <div class="text-sm font-sans italic font-bold text-th-accent tracking-widest">{{ t('form.responsePaths') }} //</div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.taskIdPath') }}</span><input :value="profile.custom.taskIdPath" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ taskIdPath: ($event.target as HTMLInputElement).value })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.statusPath') }}</span><input :value="profile.custom.statusPath" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ statusPath: ($event.target as HTMLInputElement).value })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.successValues') }}</span><input :value="profile.custom.successValues.join(',')" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ successValues: ($event.target as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean) })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.failureValues') }}</span><input :value="profile.custom.failureValues.join(',')" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ failureValues: ($event.target as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean) })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.videoUrlPath') }}</span><input :value="profile.custom.videoUrlPath" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ videoUrlPath: ($event.target as HTMLInputElement).value })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.lastFrameUrlPath') }}</span><input :value="profile.custom.lastFrameUrlPath ?? ''" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ lastFrameUrlPath: ($event.target as HTMLInputElement).value })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.errorPath') }}</span><input :value="profile.custom.errorPath ?? ''" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ errorPath: ($event.target as HTMLInputElement).value })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ tBilingual('form.progressPath') }}</span><input :value="profile.custom.progressPath ?? ''" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ progressPath: ($event.target as HTMLInputElement).value })" /></label>
-              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-gray-500 block tracking-wider">{{ t('form.pollIntervalSec') }}</span><input type="number" :value="profile.custom.pollIntervalSec" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-1.5 focus:border-ak-400 outline-none transition-colors" @input="patchCustom({ pollIntervalSec: Number(($event.target as HTMLInputElement).value) })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.taskIdPath') }}</span><input :value="profile.custom.taskIdPath" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ taskIdPath: ($event.target as HTMLInputElement).value })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.statusPath') }}</span><input :value="profile.custom.statusPath" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ statusPath: ($event.target as HTMLInputElement).value })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.successValues') }}</span><input :value="profile.custom.successValues.join(',')" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ successValues: ($event.target as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean) })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.failureValues') }}</span><input :value="profile.custom.failureValues.join(',')" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ failureValues: ($event.target as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean) })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.videoUrlPath') }}</span><input :value="profile.custom.videoUrlPath" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ videoUrlPath: ($event.target as HTMLInputElement).value })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.lastFrameUrlPath') }}</span><input :value="profile.custom.lastFrameUrlPath ?? ''" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ lastFrameUrlPath: ($event.target as HTMLInputElement).value })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.errorPath') }}</span><input :value="profile.custom.errorPath ?? ''" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ errorPath: ($event.target as HTMLInputElement).value })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ tBilingual('form.progressPath') }}</span><input :value="profile.custom.progressPath ?? ''" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ progressPath: ($event.target as HTMLInputElement).value })" /></label>
+              <label class="flex flex-col gap-2"><span class="text-[10px] font-mono text-th-text-muted block tracking-wider">{{ t('form.pollIntervalSec') }}</span><input type="number" :value="profile.custom.pollIntervalSec" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-1.5 focus:border-th-accent outline-none transition-colors" @input="patchCustom({ pollIntervalSec: Number(($event.target as HTMLInputElement).value) })" /></label>
             </div>
 
-            <details class="bg-ak-darker/80 p-4 border-l border-gray-800 group mt-4">
-              <summary class="cursor-pointer font-mono text-xs text-ak-400 font-bold flex items-center gap-2 select-none">
+            <details class="bg-th-bg-base/80 p-4 border-l border-th-border group mt-4">
+              <summary class="cursor-pointer font-mono text-xs text-th-accent font-bold flex items-center gap-2 select-none">
                 <span class="text-lg leading-none group-open:rotate-90 transition-transform">></span> {{ t('form.viewVariables') }}
               </summary>
-              <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono text-gray-400 pt-4 border-t border-gray-800">
+              <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono text-th-text-secondary pt-4 border-t border-th-border">
                 <div v-for="v in TEMPLATE_VARS" :key="v.name" class="flex flex-col gap-1">
-                  <span class="text-ak-400 font-bold">{{ v.name }}</span>
+                  <span class="text-th-accent font-bold">{{ v.name }}</span>
                   <span class="opacity-80">{{ v.desc }}</span>
                 </div>
               </div>
@@ -370,67 +374,67 @@ async function onImportFile(e: Event) {
         :label="t('form.enableProxyRouting')"
         hint="SYS.NET.PROXY_OVERRIDE"
         label-class="text-lg"
-        inactive-class="text-gray-500"
+        inactive-class="text-th-text-muted"
         :model-value="settings.proxy.enabled"
         @update:model-value="settings.setProxy({ enabled: $event })"
       />
 
-      <div class="bg-ak-dark/30 p-4 border-l-2 border-gray-800">
-        <p class="font-mono text-xs text-gray-400 leading-relaxed">
-          <span class="text-ak-400 font-bold">// NOTICE:</span> {{ t('notice.cors') }}
+      <div class="bg-th-bg-base/30 p-4 border-l-2 border-th-border">
+        <p class="font-mono text-xs text-th-text-secondary leading-relaxed">
+          <span class="text-th-accent font-bold">// NOTICE:</span> {{ t('notice.cors') }}
         </p>
       </div>
 
-      <div class="space-y-6 p-6 bg-ak-dark/50 border border-gray-800">
+      <div class="space-y-6 p-6 bg-th-bg-panel/50 border border-th-border">
         <div class="flex flex-col gap-2">
-          <span class="font-mono text-xs text-ak-400 tracking-wider">{{ t('form.proxyEndpointUrl') }} //</span>
-          <input :value="settings.proxy.url" placeholder="https://your-proxy.workers.dev" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="settings.setProxy({ url: ($event.target as HTMLInputElement).value })" />
+          <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.proxyEndpointUrl') }} //</span>
+          <input :value="settings.proxy.url" placeholder="https://your-proxy.workers.dev" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="settings.setProxy({ url: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex flex-col gap-2">
-          <span class="font-mono text-xs text-ak-400 tracking-wider">{{ t('form.rewriteStrategy') }} //</span>
-          <select :value="settings.proxy.mode" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 outline-none transition" @change="settings.setProxy({ mode: ($event.target as HTMLSelectElement).value as 'path' | 'query' })">
-            <option value="query" class="bg-ak-darker">{{ t('form.proxyQuery') }}</option>
-            <option value="path" class="bg-ak-darker">{{ t('form.proxyPath') }}</option>
+          <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.rewriteStrategy') }} //</span>
+          <select :value="settings.proxy.mode" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @change="settings.setProxy({ mode: ($event.target as HTMLSelectElement).value as 'path' | 'query' })">
+            <option value="query" class="bg-th-bg-base">{{ t('form.proxyQuery') }}</option>
+            <option value="path" class="bg-th-bg-base">{{ t('form.proxyPath') }}</option>
           </select>
         </div>
       </div>
 
-      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group mt-4" @click="testProxy">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
+      <button class="relative bg-th-accent text-th-on-accent hover:bg-th-accent-dim font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group mt-4" @click="testProxy">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-th-on-accent group-hover:h-4 transition-[height] duration-300"></span>
         {{ t('form.applyProxyCfg') }}
       </button>
     </div>
 
     <!-- AI 辅助 -->
     <div v-else-if="props.tab === 'ai'" class="space-y-6 max-w-2xl">
-      <div class="bg-ak-dark/30 p-4 border-l-2 border-ak-400/50">
-        <p class="font-mono text-xs text-gray-300 leading-relaxed flex items-start gap-2">
-          <span class="text-ak-400 animate-pulse mt-0.5">✨</span>
+      <div class="bg-th-bg-base/30 p-4 border-l-2 border-th-accent/50">
+        <p class="font-mono text-xs text-th-text-secondary leading-relaxed flex items-start gap-2">
+          <span class="text-th-accent animate-pulse mt-0.5">✨</span>
           <span>{{ t('notice.aiAssist') }}</span>
         </p>
       </div>
 
-      <div class="space-y-6 p-6 bg-ak-dark/50 border border-gray-800">
+      <div class="space-y-6 p-6 bg-th-bg-panel/50 border border-th-border">
         <div class="flex flex-col gap-2">
-          <span class="font-mono text-xs text-ak-400 tracking-wider">{{ t('form.llmBaseUrl') }} //</span>
-          <input :value="settings.settings.llmConfig?.baseUrl ?? ''" placeholder="https://api.openai.com/v1" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchLlm({ baseUrl: ($event.target as HTMLInputElement).value })" />
+          <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.llmBaseUrl') }} //</span>
+          <input :value="settings.settings.llmConfig?.baseUrl ?? ''" placeholder="https://api.openai.com/v1" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchLlm({ baseUrl: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex flex-col gap-2">
-          <span class="font-mono text-xs text-ak-400 tracking-wider">{{ t('form.authToken') }} //</span>
-          <input :value="settings.settings.llmConfig?.apiKey ?? ''" type="password" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchLlm({ apiKey: ($event.target as HTMLInputElement).value })" />
+          <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.authToken') }} //</span>
+          <input :value="settings.settings.llmConfig?.apiKey ?? ''" type="password" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchLlm({ apiKey: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex flex-col gap-2">
-          <span class="font-mono text-xs text-ak-400 tracking-wider">{{ t('form.modelIdVision') }} //</span>
-          <input :value="settings.settings.llmConfig?.model ?? ''" placeholder="gpt-4o / glm-4v" class="w-full bg-ak-dark border-b border-gray-800 text-white font-mono text-sm py-2 focus:border-ak-400 focus:shadow-[0_4px_6px_-4px_rgba(0,229,255,0.2)] outline-none transition" @input="patchLlm({ model: ($event.target as HTMLInputElement).value })" />
+          <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.modelIdVision') }} //</span>
+          <input :value="settings.settings.llmConfig?.model ?? ''" placeholder="gpt-4o / glm-4v" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchLlm({ model: ($event.target as HTMLInputElement).value })" />
         </div>
       </div>
 
-      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group" @click.prevent="testLlm">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
+      <button class="relative bg-th-accent text-th-on-accent hover:bg-th-accent-dim font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group" @click.prevent="testLlm">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-th-on-accent group-hover:h-4 transition-[height] duration-300"></span>
         {{ t('form.testLlmLink') }}
       </button>
 
-      <div class="pt-6 mt-6 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-ak-400/30 before:to-transparent">
+      <div class="pt-6 mt-6 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-th-accent/30 before:to-transparent">
         <ToggleRow
           :label="t('form.verboseLogging')"
           :hint="t('hint.verboseLog')"
@@ -442,6 +446,30 @@ async function onImportFile(e: Event) {
 
     <!-- 通用 -->
     <div v-else class="space-y-6 max-w-2xl">
+
+      <!-- 视觉协议（主题系统） -->
+      <div class="pt-6 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-th-accent/30 before:to-transparent">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-1 h-6 bg-th-accent"></div>
+          <div class="font-sans italic font-bold text-lg text-th-accent tracking-widest uppercase">{{ t('theme.sectionTitle') }} //</div>
+        </div>
+        <p class="font-mono text-xs text-th-text-muted mb-4 border-l-2 border-th-accent/50 pl-3">
+          {{ t('theme.selectTheme') }}
+        </p>
+        <ThemePicker />
+        <div class="mt-6">
+          <p class="font-mono text-xs text-th-text-muted mb-3">{{ t('theme.selectSealSet') }}</p>
+          <SealSetPicker />
+        </div>
+        <div class="mt-6">
+          <ToggleRow
+            :label="t('theme.transition')"
+            :hint="t('theme.transitionHint')"
+            :model-value="theme.transition"
+            @update:model-value="theme.setTransition"
+          />
+        </div>
+      </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ToggleRow
@@ -459,44 +487,44 @@ async function onImportFile(e: Event) {
         />
       </div>
 
-      <div class="space-y-6 p-6 bg-ak-dark/50 border border-gray-800">
+      <div class="space-y-6 p-6 bg-th-bg-panel/50 border border-th-border">
         <div class="flex flex-col gap-2">
-          <span class="font-mono text-xs text-ak-400 tracking-wider">{{ t('form.officialPollInterval') }} //</span>
+          <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.officialPollInterval') }} //</span>
           <div class="flex items-center gap-2">
-            <div class="flex items-center bg-ak-dark border-b border-gray-800 focus-within:border-ak-400 transition-colors">
-              <button class="text-gray-500 hover:text-ak-400 transition-colors px-2 py-2 flex items-center" @click="settings.update({ pollIntervalSec: Math.max(1, (settings.settings.pollIntervalSec || 1) - 1) })" title="DECREMENT" aria-label="decrement">
+            <div class="flex items-center bg-th-bg-panel border-b border-th-border focus-within:border-th-accent transition-colors">
+              <button class="text-th-text-muted hover:text-th-accent transition-colors px-2 py-2 flex items-center" @click="settings.update({ pollIntervalSec: Math.max(1, (settings.settings.pollIntervalSec || 1) - 1) })" title="DECREMENT" aria-label="decrement">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
               </button>
-              <input type="number" :value="settings.settings.pollIntervalSec" class="no-spin w-20 bg-transparent text-white font-mono text-sm py-2 focus:outline-none text-center" @input="settings.update({ pollIntervalSec: Number(($event.target as HTMLInputElement).value) })" />
-              <button class="text-gray-500 hover:text-ak-400 transition-colors px-2 py-2 flex items-center" @click="settings.update({ pollIntervalSec: (settings.settings.pollIntervalSec || 0) + 1 })" title="INCREMENT" aria-label="increment">
+              <input type="number" :value="settings.settings.pollIntervalSec" class="no-spin w-20 bg-transparent text-th-text-primary font-mono text-sm py-2 focus:outline-none text-center" @input="settings.update({ pollIntervalSec: Number(($event.target as HTMLInputElement).value) })" />
+              <button class="text-th-text-muted hover:text-th-accent transition-colors px-2 py-2 flex items-center" @click="settings.update({ pollIntervalSec: (settings.settings.pollIntervalSec || 0) + 1 })" title="INCREMENT" aria-label="increment">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" /></svg>
               </button>
             </div>
-            <span class="font-mono text-xs text-gray-500">{{ t('form.secondsDelay') }}</span>
+            <span class="font-mono text-xs text-th-text-muted">{{ t('form.secondsDelay') }}</span>
           </div>
         </div>
       </div>
 
-      <div class="pt-6 mt-6 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-ak-400/30 before:to-transparent">
+      <div class="pt-6 mt-6 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-th-accent/30 before:to-transparent">
         <div class="flex items-center gap-3 mb-6">
-          <div class="w-1 h-6 bg-ak-400 shadow-[0_0_8px_rgba(0,229,255,0.4)]"></div>
-          <div class="font-sans italic font-bold text-lg text-ak-400 tracking-widest uppercase">{{ t('form.dataManagement') }} //</div>
+          <div class="w-1 h-6 bg-th-accent"></div>
+          <div class="font-sans italic font-bold text-lg text-th-accent tracking-widest uppercase">{{ t('form.dataManagement') }} //</div>
         </div>
 
-        <p class="font-mono text-xs text-gray-500 mb-6 border-l-2 border-ak-400/50 pl-3">
+        <p class="font-mono text-xs text-th-text-muted mb-6 border-l-2 border-th-accent/50 pl-3">
           {{ t('notice.exportData') }}
         </p>
 
         <div class="flex flex-wrap gap-4">
-          <button class="flex-1 min-w-[140px] bg-ak-dark border border-gray-800 text-gray-300 hover:border-ak-400 hover:text-ak-400 hover:bg-ak-darker font-mono text-sm px-4 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="exportData">
+          <button class="flex-1 min-w-[140px] bg-th-bg-panel border border-th-border text-th-text-secondary hover:border-th-accent hover:text-th-accent hover:bg-th-bg-elevated font-mono text-sm px-4 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="exportData">
             <span class="text-lg group-hover:-translate-y-1 transition-transform">↓</span>
             {{ t('form.exportDb') }}
           </button>
-          <button class="flex-1 min-w-[140px] bg-ak-dark border border-gray-800 text-gray-300 hover:border-ak-400 hover:text-ak-400 hover:bg-ak-darker font-mono text-sm px-4 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="importData">
+          <button class="flex-1 min-w-[140px] bg-th-bg-panel border border-th-border text-th-text-secondary hover:border-th-accent hover:text-th-accent hover:bg-th-bg-elevated font-mono text-sm px-4 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="importData">
             <span class="text-lg group-hover:-translate-y-1 transition-transform">↑</span>
             {{ t('form.importDb') }}
           </button>
-          <button class="w-full md:w-auto bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white font-mono text-sm px-6 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="clearAllTasks">
+          <button class="w-full md:w-auto bg-th-error/15 border border-th-error/30 text-th-error hover:bg-th-error hover:text-th-on-accent font-mono text-sm px-6 py-3 transition-colors duration-300 flex flex-col items-center gap-1 group" @click="clearAllTasks">
             <span class="text-lg group-hover:scale-110 transition-transform">⚠</span>
             {{ t('form.purgeAllTasks') }}
           </button>

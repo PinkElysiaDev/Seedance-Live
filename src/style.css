@@ -2,6 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   主题系统：CSS 变量定义
+   每主题一段 [data-theme=...] 变量块，组件通过 th-* / var(--th-*) 引用。
+   颜色真值以此处为准；src/config/themes.ts 仅持有 JS 元数据。
+   ============================================================ */
+
+/* ---- 樱花粉 / 珍珠白（唯一浅色主题，默认） ---- */
+[data-theme="sakura-pearl"] {
+  --th-accent: #FF7FB2;
+  --th-accent-dim: #E85F94;
+  --th-accent-glow: rgba(255, 127, 178, 0.35);
+  --th-bg-base: #FAF6F8;
+  --th-bg-panel: #FFFFFF;
+  --th-bg-elevated: #F3EAEE;
+  --th-border: #E8D4DC;
+  --th-text-primary: #2A1620;
+  --th-text-secondary: #7A5A6A;
+  --th-text-muted: #B89CA8;
+  --th-success: #4CAF82;
+  --th-warning: #E8A04A;
+  --th-error: #E55A6A;
+  --th-on-accent: #FFFFFF;
+  --th-overlay: rgba(40, 20, 30, 0.45);
+  /* RGB 三元组：供 rgba(var(--th-X-rgb), α) 任意透明度发光使用 */
+  --th-accent-rgb: 255, 127, 178;
+  --th-success-rgb: 76, 175, 130;
+  --th-warning-rgb: 232, 160, 74;
+  --th-error-rgb: 229, 90, 106;
+  /* 刻印在白底上：normal blend + 较高透明度 + 粉色柔光阴影，
+     让浅色线稿以压印/烫金式水印浮现（不反相、不染色，沿用原本刻印效果，仅加阴影） */
+  --th-seal-opacity: 0.55;
+  --th-seal-blend: normal;
+  --th-seal-filter: drop-shadow(0 2px 6px rgba(255, 127, 178, 0.28)) blur(0.5px);
+  /* 阴影分桶：卡片=柔粉 elevate；面板/模态=柔粉光晕；方向=左面板方向 */
+  --th-shadow-card: 0 10px 24px -6px rgba(180, 120, 150, 0.18), 0 4px 8px -4px rgba(180, 120, 150, 0.12);
+  --th-shadow-panel: 0 0 24px rgba(180, 120, 150, 0.14);
+  --th-shadow-elevated: 0 0 32px rgba(180, 120, 150, 0.20);
+  --th-shadow-directional: 10px 0 30px rgba(180, 120, 150, 0.15);
+  --th-shadow-directional-hover: 14px 0 40px rgba(180, 120, 150, 0.20);
+  /* body 中心渐变：中心纯白→四周珍珠白 */
+  --th-body-grad-0: #FFFFFF;
+  --th-body-grad-100: #FAF6F8;
+  /* logo 静态发光（柔粉，沿用原版透明度序列 0.55/0.25） */
+  --th-logo-glow: drop-shadow(0 0 6px rgba(var(--th-accent-rgb), 0.55)) drop-shadow(0 0 12px rgba(var(--th-accent-rgb), 0.25));
+  /* 扫描线在白底上用淡粉 */
+  --th-scanline: rgba(255, 127, 178, 0.05);
+  /* 聚光蒙版：中心透、四周淡粉白压暗（珍珠纸面感） */
+  --th-vignette-0: rgba(255, 255, 255, 0);
+  --th-vignette-40: rgba(250, 246, 248, 0.3);
+  --th-vignette-75: rgba(235, 224, 230, 0.7);
+  --th-vignette-100: rgba(225, 212, 220, 0.92);
+}
+
+/* ---- 刻印青（原有深色经典，暗） ---- */
+[data-theme="ark-cyan"] {
+  --th-accent: #00E5FF;
+  --th-accent-dim: #00B8D4;
+  --th-accent-glow: rgba(0, 229, 255, 0.4);
+  --th-bg-base: #0a0a0a;
+  --th-bg-panel: #111111;
+  --th-bg-elevated: #1a1a1a;
+  --th-border: #333333;
+  --th-text-primary: #ffffff;
+  --th-text-secondary: #a3a3a3;
+  --th-text-muted: #666666;
+  --th-success: #2dd4bf;
+  --th-warning: #facc15;
+  --th-error: #ef4444;
+  --th-on-accent: #0a0a0a;
+  --th-overlay: rgba(0, 0, 0, 0.7);
+  /* RGB 三元组：供 rgba(var(--th-X-rgb), α) 任意透明度发光使用 */
+  --th-accent-rgb: 0, 229, 255;
+  --th-success-rgb: 45, 212, 191;
+  --th-warning-rgb: 234, 179, 8;
+  --th-error-rgb: 239, 68, 68;
+  /* 暗主题：normal blend + 低透明度（原版即 normal，非 screen） */
+  --th-seal-opacity: 0.13;
+  --th-seal-blend: normal;
+  --th-seal-filter: none;
+  /* 阴影分桶：卡片=shadow-lg（暗底加重）；面板/模态=黑光晕；方向=左面板方向 */
+  --th-shadow-card: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --th-shadow-panel: 0 0 30px rgba(0, 0, 0, 0.8);
+  --th-shadow-elevated: 0 0 40px rgba(0, 0, 0, 0.9);
+  --th-shadow-directional: 10px 0 30px rgba(0, 0, 0, 0.85);
+  --th-shadow-directional-hover: 14px 0 40px rgba(0, 0, 0, 0.9);
+  /* body 中心渐变：原版 rgba(30,30,30,0.8)→rgba(10,10,10,1) */
+  --th-body-grad-0: rgba(30, 30, 30, 0.8);
+  --th-body-grad-100: rgba(10, 10, 10, 1);
+  /* logo 静态发光（沿用原版透明度序列 0.55/0.25） */
+  --th-logo-glow: drop-shadow(0 0 6px rgba(var(--th-accent-rgb), 0.55)) drop-shadow(0 0 12px rgba(var(--th-accent-rgb), 0.25));
+  --th-scanline: rgba(0, 229, 255, 0.015);
+  /* 聚光蒙版：中心透、四周压暗（原版 rgba(10,10,10) 停点 0/35/75/100） */
+  --th-vignette-0: rgba(10, 10, 10, 0);
+  --th-vignette-40: rgba(10, 10, 10, 0.35);
+  --th-vignette-75: rgba(10, 10, 10, 0.85);
+  --th-vignette-100: rgba(10, 10, 10, 0.98);
+}
+
+/* 主题切换时颜色平滑过渡 */
+html {
+  transition: background-color 0.4s cubic-bezier(0.25, 1, 0.2, 1),
+              color 0.4s cubic-bezier(0.25, 1, 0.2, 1);
+}
+
+
 @layer utilities {
   /* 基础倒角 */
   .clip-chamfer {
@@ -39,10 +144,10 @@ body,
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
-  @apply text-gray-300;
-  background-color: #0a0a0a;
-  background-image: radial-gradient(ellipse at center, rgba(30, 30, 30, 0.8) 0%, rgba(10, 10, 10, 1) 100%);
-    
+  color: var(--th-text-secondary);
+  background-color: var(--th-bg-base);
+  /* 中心微亮、四周压暗：ark=rgba(30,30,30,0.8)→rgba(10,10,10,1)；白粉=纯白→珍珠白 */
+  background-image: radial-gradient(ellipse at center, var(--th-body-grad-0) 0%, var(--th-body-grad-100) 100%);
 }
 
 /* 隐藏滚动条 */
@@ -65,19 +170,19 @@ body {
   appearance: textfield;
 }
 
-/* 顶部 Logo 发光 + 呼吸灯效（发光起伏 + 明灭） */
+/* 顶部 Logo 发光 + 呼吸灯效（发光起伏 + 明灭）；颜色跟随主题强调色 */
 .logo-glow {
-  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.55)) drop-shadow(0 0 12px rgba(0, 229, 255, 0.25));
+  filter: var(--th-logo-glow);
   animation: logo-breathe 3.2s ease-in-out infinite;
 }
 @keyframes logo-breathe {
   0%, 100% {
     opacity: 0.55;
-    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.25)) drop-shadow(0 0 6px rgba(0, 229, 255, 0.1));
+    filter: drop-shadow(0 0 3px rgba(var(--th-accent-rgb), 0.25)) drop-shadow(0 0 6px rgba(var(--th-accent-rgb), 0.1));
   }
   50% {
     opacity: 1;
-    filter: drop-shadow(0 0 11px rgba(0, 229, 255, 0.85)) drop-shadow(0 0 22px rgba(0, 229, 255, 0.45));
+    filter: drop-shadow(0 0 11px rgba(var(--th-accent-rgb), 0.85)) drop-shadow(0 0 22px rgba(var(--th-accent-rgb), 0.45));
   }
 }
 
@@ -129,29 +234,79 @@ body {
   to { width: 0%; }
 }
 
-/* Terminal 空状态：多层光圈呼吸 + 核心脉动（无缝循环） */
+/* Terminal 空状态：多层光圈呼吸 + 核心脉动（无缝循环；颜色跟随主题强调色） */
 @keyframes terminal-breathe {
   0%   { transform: scale(0.6); opacity: 0; }
   40%  { opacity: 0.8; }
   100% { transform: scale(1.6); opacity: 0; }
 }
 @keyframes terminal-core {
-  0%, 100% { transform: scale(0.85); box-shadow: 0 0 8px rgba(0,229,255,0.4); }
-  50%      { transform: scale(1.15); box-shadow: 0 0 18px rgba(0,229,255,0.8); }
+  0%, 100% { transform: scale(0.85); box-shadow: 0 0 8px rgba(var(--th-accent-rgb), 0.4); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 18px rgba(var(--th-accent-rgb), 0.8); }
 }
 @keyframes terminal-ring-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-/* 级别筛选芯片灯光呼吸（无缝循环，强呼吸：opacity 大幅起伏 + 缩放） */
+/* 级别筛选芯片灯光呼吸（无缝循环，强呼吸：opacity 大幅起伏 + 缩放；无颜色，主题色由组件 shadow 提供） */
 @keyframes lamp-breathe {
   0%, 100% { opacity: 0.3; transform: scale(0.85); }
   50%      { opacity: 1; transform: scale(1.15); }
 }
 
-/* verbose_log status line breathe animation */
+/* verbose_log status line breathe animation；颜色跟随主题强调色 */
 @keyframes line-breathe {
-  0%, 100% { opacity: 0.3; filter: drop-shadow(0 0 1px rgba(0, 229, 255, 0.4)); }
-  50%      { opacity: 1; filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.9)); }
+  0%, 100% { opacity: 0.3; filter: drop-shadow(0 0 1px rgba(var(--th-accent-rgb), 0.4)); }
+  50%      { opacity: 1; filter: drop-shadow(0 0 6px rgba(var(--th-accent-rgb), 0.9)); }
 }
+
+/* ============================================================
+   主题切换动效：Logo 充能 + 全屏冲击波 + 浅色主题白光闪现
+   ============================================================ */
+
+/* Logo 充能：点击切换主题时先收缩蓄力再爆发 */
+@keyframes logo-charge {
+  0%   { filter: drop-shadow(0 0 6px var(--th-accent-glow)); transform: scale(1); }
+  40%  { filter: drop-shadow(0 0 30px var(--th-accent));    transform: scale(0.92); }
+  70%  { filter: drop-shadow(0 0 60px var(--th-accent));    transform: scale(1.08); }
+  100% { filter: drop-shadow(0 0 6px var(--th-accent-glow)); transform: scale(1); }
+}
+.logo-charging {
+  animation: logo-charge 0.6s cubic-bezier(0.25, 1, 0.2, 1);
+}
+
+/* 主题切换冲击波环：从中心 scale 0 扩散到 3，透明度 1 → 0 */
+@keyframes theme-shockwave {
+  0%   { transform: scale(0); opacity: 0.9; border-width: 3px; }
+  100% { transform: scale(3); opacity: 0; border-width: 1px; }
+}
+.theme-shockwave-ring {
+  width: 60vmin;
+  height: 60vmin;
+  border-radius: 50%;
+  border: 3px solid var(--th-accent);
+  box-shadow: 0 0 40px var(--th-accent-glow), inset 0 0 40px var(--th-accent-glow);
+  animation: theme-shockwave 0.7s cubic-bezier(0.25, 1, 0.2, 1) forwards;
+}
+
+/* 主题切换能量浸染蒙版：全屏主题色极淡淡入再淡出 */
+@keyframes theme-soak {
+  0%   { opacity: 0; }
+  35%  { opacity: 0.18; }
+  100% { opacity: 0; }
+}
+.theme-soak-overlay {
+  animation: theme-soak 0.7s cubic-bezier(0.25, 1, 0.2, 1) forwards;
+}
+
+/* 浅色主题切换专用：白光闪现，掩盖黑→白切换的突兀感 */
+@keyframes theme-flash {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+.theme-flash-overlay {
+  animation: theme-flash 0.4s ease-out forwards;
+}
+

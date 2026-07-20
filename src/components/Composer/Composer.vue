@@ -94,7 +94,7 @@ function onDragOver(e: DragEvent) {
   >
     <PromptArea />
 
-    <div v-if="validationErrors.length" class="border-l-4 border-red-500 bg-red-500/10 px-4 py-3 text-xs text-red-400 font-sans tracking-wider w-full">
+    <div v-if="validationErrors.length" class="border-l-4 border-th-error bg-th-error/10 px-4 py-3 text-xs text-th-error font-sans tracking-wider w-full">
       <div class="font-bold mb-1 uppercase">>> {{ t('composer.systemConflict') }}</div>
       <div v-for="(e, i) in validationErrors" :key="i">ERR: {{ e }}</div>
     </div>
@@ -102,7 +102,7 @@ function onDragOver(e: DragEvent) {
     <!-- Submit Button stylized like Arknights -->
     <div class="relative">
       <button
-        class="w-full relative h-16 bg-white text-ak-darker font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-ak-400 transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
+        class="w-full relative h-16 bg-th-accent text-th-on-accent font-sans font-black text-xl tracking-[0.2em] uppercase hover:bg-th-accent-dim transition-colors group overflow-hidden disabled:opacity-50 disabled:grayscale flex items-center justify-between px-6"
         :class="isPromptEmpty ? 'opacity-50 grayscale' : ''"
         :disabled="tasks.tasks.some((t) => t.status === 'running')"
         @click="submit"
@@ -110,14 +110,14 @@ function onDragOver(e: DragEvent) {
         <div class="flex items-center gap-4 relative z-10">
           <!-- Progressing bars animation on hover -->
           <div class="flex gap-1 group-hover:gap-2 transition-[gap]">
-            <div class="w-1 h-6 bg-ak-darker"></div>
-            <div class="w-2 h-6 bg-ak-darker"></div>
-            <div class="w-4 h-6 bg-ak-darker"></div>
+            <div class="w-1 h-6 bg-th-on-accent"></div>
+            <div class="w-2 h-6 bg-th-on-accent"></div>
+            <div class="w-4 h-6 bg-th-on-accent"></div>
           </div>
           <span>INITIATE RENDER</span>
         </div>
         <!-- Right side arrow indicator -->
-        <div class="relative z-10 text-ak-darker font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">
+        <div class="relative z-10 text-th-on-accent font-mono font-light text-2xl group-hover:translate-x-2 transition-transform">
           -&gt;
         </div>
         <!-- Caution background striping -->

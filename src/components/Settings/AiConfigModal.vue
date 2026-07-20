@@ -117,54 +117,54 @@ function apply() {
 <template>
   <Modal :show="props.show" title="✨ AI_PARSE_MODULE //" width="680px" @close="emit('close')">
     <div class="space-y-4">
-      <p class="font-mono text-[10px] text-gray-500 leading-relaxed border-l-2 border-ak-400 pl-2">
+      <p class="font-mono text-[10px] text-th-text-muted leading-relaxed border-l-2 border-th-accent pl-2">
         // {{ t('notice.aiPasteHint') }}
       </p>
 
-      <div class="flex gap-1 border border-gray-800 bg-ak-dark p-1 w-fit">
+      <div class="flex gap-1 border border-th-border bg-th-bg-panel p-1 w-fit">
         <button v-for="tab in [{k:'text',key:'ai.tabText'},{k:'image',key:'ai.tabImage'},{k:'url',key:'ai.tabUrl'}]" :key="tab.k"
           class="px-4 py-1.5 font-mono text-[10px] transition"
-          :class="mode === tab.k ? 'bg-ak-400 text-ak-darker font-bold shadow-[0_0_8px_rgba(0,229,255,0.4)]' : 'text-gray-500 hover:text-white'"
+          :class="mode === tab.k ? 'bg-th-accent text-th-on-accent font-bold' : 'text-th-text-muted hover:text-th-text-primary'"
           @click="mode = tab.k as typeof mode">> {{ t(tab.key) }}</button>
       </div>
 
-      <textarea v-if="mode === 'text'" v-model="docText" rows="6" :placeholder="t('ai.placeholderPaste')" class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs p-3 focus:border-ak-400 outline-none" />
+      <textarea v-if="mode === 'text'" v-model="docText" rows="6" :placeholder="t('ai.placeholderPaste')" class="w-full bg-th-bg-panel border border-th-border text-th-text-primary font-mono text-xs p-3 focus:border-th-accent outline-none" />
 
-      <div v-else-if="mode === 'image'" class="space-y-3 p-4 border border-dashed border-gray-800 bg-ak-dark/50">
-        <input type="file" accept="image/*" multiple class="text-[10px] font-mono text-gray-400 file:bg-ak-dark file:border file:border-gray-800 file:text-ak-400 file:px-3 file:py-1 hover:file:bg-ak-gray transition-colors" @change="onPickImages" />
+      <div v-else-if="mode === 'image'" class="space-y-3 p-4 border border-dashed border-th-border bg-th-bg-panel/50">
+        <input type="file" accept="image/*" multiple class="text-[10px] font-mono text-th-text-muted file:bg-th-bg-panel file:border file:border-th-border file:text-th-accent file:px-3 file:py-1 hover:file:bg-th-bg-elevated transition-colors" @change="onPickImages" />
         <div class="flex flex-wrap gap-2">
           <div v-for="(img, i) in images" :key="i" class="relative group">
-            <img :src="img" class="h-24 w-auto object-cover border border-gray-800 group-hover:border-ak-400 transition-colors" />
-            <button class="absolute -right-1 -top-1 bg-red-950/85 text-red-400 border border-red-500/50 hover:bg-red-500 hover:text-ak-darker px-1 text-[10px] font-mono transition-colors" @click="removeImage(i)">✕</button>
+            <img :src="img" class="h-24 w-auto object-cover border border-th-border group-hover:border-th-accent transition-colors" />
+            <button class="absolute -right-1 -top-1 bg-th-error/85 text-th-error border border-th-error/50 hover:bg-th-error hover:text-th-on-accent px-1 text-[10px] font-mono transition-colors" @click="removeImage(i)">✕</button>
           </div>
         </div>
       </div>
 
       <div v-else>
-        <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full bg-ak-dark border border-gray-800 text-white font-mono text-xs px-3 py-2 focus:border-ak-400 outline-none" />
-        <p class="mt-1 font-mono text-[10px] text-gray-600">// {{ t('notice.aiUrlProxyHint') }}</p>
+        <input v-model="docUrl" placeholder="https://docs.example.com/api/..." class="w-full bg-th-bg-panel border border-th-border text-th-text-primary font-mono text-xs px-3 py-2 focus:border-th-accent outline-none" />
+        <p class="mt-1 font-mono text-[10px] text-th-text-muted">// {{ t('notice.aiUrlProxyHint') }}</p>
       </div>
 
-      <button class="relative bg-white text-ak-darker hover:bg-ak-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.45)] font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group disabled:opacity-50 disabled:grayscale disabled:hover:bg-white disabled:hover:shadow-none" :disabled="loading" @click="parse">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-ak-darker group-hover:h-2 transition-[height] duration-300"></span>
+      <button class="relative bg-th-accent text-th-on-accent hover:bg-th-accent-dim font-sans italic font-bold text-sm tracking-widest pl-10 pr-8 py-3 transition flex items-center group disabled:opacity-50 disabled:grayscale disabled:hover:bg-th-accent" :disabled="loading" @click="parse">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-th-on-accent group-hover:h-2 transition-[height] duration-300"></span>
         {{ loading ? t('ai.processing') : t('ai.initiateParse') }}
       </button>
 
-      <div v-if="parsed" class="border border-ak-400/30 bg-ak-darker p-4 mt-4">
-        <div class="font-mono text-[10px] font-bold text-ak-400 border-b border-gray-800 pb-1 mb-3">{{ t('ai.resultPreview') }} //</div>
-        <div class="space-y-1.5 font-mono text-[10px] text-gray-400">
-          <div><span class="text-gray-600">{{ t('ai.fieldModel') }}:</span> <span class="text-white">{{ parsed.model || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">{{ t('form.submitUrl') }}:</span> <span class="text-white">{{ parsed.submit?.url || 'N/A' }}</span></div>
-          <div class="pt-1"><span class="text-gray-600 block mb-1">{{ t('ai.fieldSubmitBody') }}:</span><pre class="max-h-32 overflow-auto bg-ak-dark border border-gray-800 p-2 text-ak-400">{{ parsed.submit?.body }}</pre></div>
-          <div class="pt-2"><span class="text-gray-600">{{ t('form.pollUrl') }}:</span> <span class="text-white">{{ parsed.poll?.url || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">{{ t('form.taskIdPath') }}:</span> <span class="text-white">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">{{ t('form.statusPath') }}:</span> <span class="text-white">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">{{ t('form.successValues') }}:</span> <span class="text-white">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">{{ t('form.failureValues') }}:</span> <span class="text-white">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
-          <div><span class="text-gray-600">{{ t('form.videoUrlPath') }}:</span> <span class="text-white">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
-          <div v-if="parsed.notes" class="text-ak-400 mt-2 border-l-2 border-ak-400 pl-2">{{ t('ai.fieldNote') }}: {{ parsed.notes }}</div>
+      <div v-if="parsed" class="border border-th-accent/30 bg-th-bg-base p-4 mt-4">
+        <div class="font-mono text-[10px] font-bold text-th-accent border-b border-th-border pb-1 mb-3">{{ t('ai.resultPreview') }} //</div>
+        <div class="space-y-1.5 font-mono text-[10px] text-th-text-secondary">
+          <div><span class="text-th-text-muted">{{ t('ai.fieldModel') }}:</span> <span class="text-th-text-primary">{{ parsed.model || 'N/A' }}</span></div>
+          <div><span class="text-th-text-muted">{{ t('form.submitUrl') }}:</span> <span class="text-th-text-primary">{{ parsed.submit?.url || 'N/A' }}</span></div>
+          <div class="pt-1"><span class="text-th-text-muted block mb-1">{{ t('ai.fieldSubmitBody') }}:</span><pre class="max-h-32 overflow-auto bg-th-bg-panel border border-th-border p-2 text-th-accent">{{ parsed.submit?.body }}</pre></div>
+          <div class="pt-2"><span class="text-th-text-muted">{{ t('form.pollUrl') }}:</span> <span class="text-th-text-primary">{{ parsed.poll?.url || 'N/A' }}</span></div>
+          <div><span class="text-th-text-muted">{{ t('form.taskIdPath') }}:</span> <span class="text-th-text-primary">{{ parsed.response?.taskIdPath || 'N/A' }}</span></div>
+          <div><span class="text-th-text-muted">{{ t('form.statusPath') }}:</span> <span class="text-th-text-primary">{{ parsed.response?.statusPath || 'N/A' }}</span></div>
+          <div><span class="text-th-text-muted">{{ t('form.successValues') }}:</span> <span class="text-th-text-primary">{{ parsed.response?.successValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-th-text-muted">{{ t('form.failureValues') }}:</span> <span class="text-th-text-primary">{{ parsed.response?.failureValues?.join(', ') || 'N/A' }}</span></div>
+          <div><span class="text-th-text-muted">{{ t('form.videoUrlPath') }}:</span> <span class="text-th-text-primary">{{ parsed.response?.videoUrlPath || 'N/A' }}</span></div>
+          <div v-if="parsed.notes" class="text-th-accent mt-2 border-l-2 border-th-accent pl-2">{{ t('ai.fieldNote') }}: {{ parsed.notes }}</div>
         </div>
-        <button class="mt-4 border border-teal-500/50 bg-teal-950/20 text-teal-400 px-4 py-2 font-mono text-xs hover:bg-teal-400 hover:text-ak-darker transition-colors" @click="apply">> {{ t('ai.applyToProfile') }}</button>
+        <button class="mt-4 border border-th-accent/50 bg-th-accent/10 text-th-accent px-4 py-2 font-mono text-xs hover:bg-th-accent hover:text-th-on-accent transition-colors" @click="apply">> {{ t('ai.applyToProfile') }}</button>
       </div>
     </div>
   </Modal>

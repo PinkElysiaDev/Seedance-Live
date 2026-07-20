@@ -256,8 +256,8 @@ function closeLightbox() {
     <div v-if="props.mode === 'REF_MODE'" class="w-full">
       <!-- 添加框：无素材时显示占位；有素材时框内直接预览文件。整框可点击/拖拽/粘贴上传 -->
       <div
-        class="w-full border border-gray-700 bg-ak-dark/80 p-4 flex flex-col gap-3 hover:border-ak-400/50 transition-colors relative min-h-[150px] cursor-pointer outline-none"
-        :class="isDragOver['referenceImage'] ? 'border-ak-400 bg-ak-gray/40' : ''"
+        class="w-full border border-th-border bg-th-bg-panel/80 p-4 flex flex-col gap-3 hover:border-th-accent/50 transition-colors relative min-h-[150px] cursor-pointer outline-none"
+        :class="isDragOver['referenceImage'] ? 'border-th-accent bg-th-bg-elevated/40' : ''"
         tabindex="0"
         @click="fileInputs['refPool']?.click()"
         @dragover="onDragOver('referenceImage', $event as DragEvent)"
@@ -271,11 +271,11 @@ function closeLightbox() {
           @click.stop="fileInputs['refPool']?.click()"
         >
           <div class="flex gap-1 mb-2 opacity-50 group-hover:opacity-100 transition-opacity">
-            <div class="w-8 h-1 bg-ak-400"></div>
-            <div class="w-2 h-1 bg-ak-400"></div>
+            <div class="w-8 h-1 bg-th-accent"></div>
+            <div class="w-2 h-1 bg-th-accent"></div>
           </div>
-          <div class="text-white font-sans font-black tracking-[0.2em] uppercase text-sm">{{ t('asset.addReference') }}</div>
-          <p class="text-gray-500 font-sans text-xs uppercase tracking-wider group-hover:text-ak-400 transition-colors">{{ t('asset.importHint') }}</p>
+          <div class="text-th-text-primary font-sans font-black tracking-[0.2em] uppercase text-sm">{{ t('asset.addReference') }}</div>
+          <p class="text-th-text-muted font-sans text-xs uppercase tracking-wider group-hover:text-th-accent transition-colors">{{ t('asset.importHint') }}</p>
         </button>
 
         <!-- 有素材时：框内预览网格 -->
@@ -284,10 +284,10 @@ function closeLightbox() {
             v-for="a in refAssets"
             :key="a.id"
             draggable="true"
-            class="relative w-24 h-24 border border-gray-700 bg-ak-darker overflow-hidden group/asset cursor-grab transition"
+            class="relative w-24 h-24 border border-th-border bg-th-bg-base overflow-hidden group/asset cursor-grab transition"
             :class="{
               'opacity-40': draggingId === a.id,
-              'ring-2 ring-ak-400': dropTargetId === a.id,
+              'ring-2 ring-th-accent': dropTargetId === a.id,
             }"
             @dragstart="onAssetDragStart(a, $event as DragEvent)"
             @dragend="onAssetDragEnd"
@@ -303,28 +303,28 @@ function closeLightbox() {
             >
               <img v-if="a.kind === 'image'" :src="previewUrls[a.id]" loading="lazy" draggable="false" class="w-full h-full object-cover" :alt="a.name" />
               <video v-else-if="a.kind === 'video'" :src="previewUrls[a.id]" draggable="false" class="w-full h-full object-cover" muted />
-              <div v-else-if="a.kind === 'audio'" class="w-full h-full flex flex-col items-center justify-center gap-1 text-ak-400">
+              <div v-else-if="a.kind === 'audio'" class="w-full h-full flex flex-col items-center justify-center gap-1 text-th-accent">
                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-3c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" /></svg>
                 <span class="text-[9px] font-mono uppercase">AUDIO</span>
               </div>
             </button>
-            <div v-else class="w-full h-full flex items-center justify-center text-gray-600 text-xs font-mono">...</div>
+            <div v-else class="w-full h-full flex items-center justify-center text-th-text-muted text-xs font-mono">...</div>
 
             <!-- 类型角标 -->
-            <span class="absolute top-0 left-0 bg-ak-400/90 text-ak-darker font-sans font-bold text-[9px] px-1 py-0.5 tracking-widest uppercase z-10">{{ a.role.replace('reference', '').toUpperCase() }}</span>
+            <span class="absolute top-0 left-0 bg-th-accent/90 text-th-on-accent font-sans font-bold text-[9px] px-1 py-0.5 tracking-widest uppercase z-10">{{ a.role.replace('reference', '').toUpperCase() }}</span>
             <!-- 删除按钮 -->
             <button
-              class="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20"
+              class="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-th-overlay text-th-error hover:bg-th-error hover:text-th-on-accent transition-colors z-20"
               @click.stop="composer.removeAsset(a.id)"
               :title="t('title.removeAsset')"
             >✕</button>
             <!-- 文件名 -->
-            <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="a.name">{{ a.name }}</span>
+            <span class="absolute bottom-0 left-0 right-0 bg-th-overlay text-th-text-secondary text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="a.name">{{ a.name }}</span>
           </div>
 
           <!-- 继续添加按钮（未达上限时） -->
           <button
-            class="w-24 h-24 border border-dashed border-gray-600 hover:border-ak-400/50 hover:bg-ak-gray/40 transition-colors flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-ak-400 cursor-pointer"
+            class="w-24 h-24 border border-dashed border-th-text-muted hover:border-th-accent/50 hover:bg-th-bg-elevated/40 transition-colors flex flex-col items-center justify-center gap-1 text-th-text-muted hover:text-th-accent cursor-pointer"
             @click.stop="fileInputs['refPool']?.click()"
           >
             <span class="text-2xl font-light leading-none">+</span>
@@ -348,15 +348,15 @@ function closeLightbox() {
 
       <!-- Start Frame Slot -->
       <div
-        class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
-        :class="isDragOver['firstFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
+        class="flex-1 border border-th-border bg-th-bg-panel/80 relative flex flex-col hover:border-th-accent/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
+        :class="isDragOver['firstFrame'] ? 'border-th-accent bg-th-bg-elevated/40' : ''"
         tabindex="0"
         @click="fileInputs['firstFrame']?.click()"
         @dragover="onDragOver('firstFrame', $event as DragEvent)"
         @dragleave="onDragLeave('firstFrame', $event as DragEvent)"
         @drop="onDrop('firstFrame', $event as DragEvent)"
       >
-        <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">{{ t('asset.startFrame') }}</div>
+        <div class="absolute top-0 left-0 bg-th-accent text-th-on-accent font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">{{ t('asset.startFrame') }}</div>
 
         <!-- 预览/占位 -->
         <div class="flex-1 flex items-center justify-center p-2">
@@ -370,15 +370,15 @@ function closeLightbox() {
             />
             <!-- 删除按钮（右上角） -->
             <button
-              class="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm"
+              class="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-th-overlay text-th-error hover:bg-th-error hover:text-th-on-accent transition-colors z-20 rounded-sm"
               @click.stop="composer.removeAsset(assetsOf('firstFrame')[0].id)"
               :title="t('title.removeAsset')"
             >✕</button>
             <!-- 文件名横幅（与参考图模式一致） -->
-            <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('firstFrame')[0].name">{{ assetsOf('firstFrame')[0].name }}</span>
+            <span class="absolute bottom-0 left-0 right-0 bg-th-overlay text-th-text-secondary text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('firstFrame')[0].name">{{ assetsOf('firstFrame')[0].name }}</span>
           </div>
-          <div v-else-if="assetsOf('firstFrame')[0]" class="text-gray-500 text-xs font-mono">{{ t('placeholder.loading') }}</div>
-          <div v-else class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-ak-400 transition-colors">
+          <div v-else-if="assetsOf('firstFrame')[0]" class="text-th-text-muted text-xs font-mono">{{ t('placeholder.loading') }}</div>
+          <div v-else class="flex flex-col items-center gap-1 text-th-text-muted group-hover:text-th-accent transition-colors">
             <span class="text-2xl font-light leading-none">+</span>
             <span class="text-[10px] font-sans uppercase tracking-widest">{{ t('asset.startImage') }}</span>
           </div>
@@ -395,7 +395,7 @@ function closeLightbox() {
 
       <!-- 中间切换按钮：平时透明无外圈，hover 后出现圆形不透明底 -->
       <button
-        class="self-center z-20 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full border border-transparent bg-transparent text-gray-500/70 hover:text-ak-400 hover:bg-ak-gray hover:border-ak-400 hover:shadow-lg hover:scale-110 transition duration-200"
+        class="self-center z-20 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full border border-transparent bg-transparent text-th-text-muted hover:text-th-accent hover:bg-th-bg-elevated hover:border-th-accent hover:shadow-lg hover:scale-110 transition duration-200"
         @click="swapKeyframes"
         title="Swap Frames"
       >
@@ -404,15 +404,15 @@ function closeLightbox() {
 
       <!-- End Frame Slot -->
       <div
-        class="flex-1 border border-gray-700 bg-ak-dark/80 relative flex flex-col hover:border-ak-400/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
-        :class="isDragOver['lastFrame'] ? 'border-ak-400 bg-ak-gray/40' : ''"
+        class="flex-1 border border-th-border bg-th-bg-panel/80 relative flex flex-col hover:border-th-accent/50 cursor-pointer group transition-colors overflow-hidden h-[150px] outline-none"
+        :class="isDragOver['lastFrame'] ? 'border-th-accent bg-th-bg-elevated/40' : ''"
         tabindex="0"
         @click="fileInputs['lastFrame']?.click()"
         @dragover="onDragOver('lastFrame', $event as DragEvent)"
         @dragleave="onDragLeave('lastFrame', $event as DragEvent)"
         @drop="onDrop('lastFrame', $event as DragEvent)"
       >
-        <div class="absolute top-0 right-0 bg-gray-600 text-white font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">{{ t('asset.endFrame') }}</div>
+        <div class="absolute top-0 right-0 bg-th-text-muted text-th-text-primary font-sans font-bold text-[10px] px-2 py-0.5 z-20 tracking-widest">{{ t('asset.endFrame') }}</div>
 
         <div class="flex-1 flex items-center justify-center p-2">
           <div v-if="assetsOf('lastFrame')[0] && previewUrls[assetsOf('lastFrame')[0].id]" class="relative max-h-[120px] max-w-full">
@@ -425,15 +425,15 @@ function closeLightbox() {
             />
             <!-- 删除按钮（左上角，避开右上角 END_FRAME 角标） -->
             <button
-              class="absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center bg-black/70 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm"
+              class="absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center bg-th-overlay text-th-error hover:bg-th-error hover:text-th-on-accent transition-colors z-20 rounded-sm"
               @click.stop="composer.removeAsset(assetsOf('lastFrame')[0].id)"
               :title="t('title.removeAsset')"
             >✕</button>
             <!-- 文件名横幅（与参考图模式一致） -->
-            <span class="absolute bottom-0 left-0 right-0 bg-black/70 text-gray-300 text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('lastFrame')[0].name">{{ assetsOf('lastFrame')[0].name }}</span>
+            <span class="absolute bottom-0 left-0 right-0 bg-th-overlay text-th-text-secondary text-[9px] font-mono px-1 py-0.5 truncate z-10" :title="assetsOf('lastFrame')[0].name">{{ assetsOf('lastFrame')[0].name }}</span>
           </div>
-          <div v-else-if="assetsOf('lastFrame')[0]" class="text-gray-500 text-xs font-mono">{{ t('placeholder.loading') }}</div>
-          <div v-else class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-white transition-colors">
+          <div v-else-if="assetsOf('lastFrame')[0]" class="text-th-text-muted text-xs font-mono">{{ t('placeholder.loading') }}</div>
+          <div v-else class="flex flex-col items-center gap-1 text-th-text-muted group-hover:text-th-text-primary transition-colors">
             <span class="text-2xl font-light leading-none">+</span>
             <span class="text-[10px] font-sans uppercase tracking-widest">{{ t('asset.endImage') }}</span>
           </div>
@@ -449,20 +449,21 @@ function closeLightbox() {
       </div>
     </div>
 
-    <!-- 放大预览 Lightbox（ak 主题，图片/视频/音频） -->
+    <!-- 放大预览 Lightbox（图片/视频/音频） -->
     <Teleport to="body">
       <Transition name="modal-pop">
       <div v-if="lightboxAsset" class="fixed inset-0 z-50 flex items-center justify-center p-8" @click="closeLightbox">
-        <div class="absolute inset-0 bg-black/85 backdrop-blur-sm"></div>
+        <div class="absolute inset-0 backdrop-blur-sm" :style="{ backgroundColor: 'var(--th-overlay)' }"></div>
         <div class="relative z-10 max-w-[90vw] max-h-[90vh] flex flex-col items-center gap-3" @click.stop>
           <div class="flex items-center justify-between w-full gap-4">
-            <span class="font-mono text-xs text-ak-400 tracking-widest uppercase truncate">{{ lightboxAsset.role }} · {{ lightboxAsset.name }}</span>
-            <button class="font-mono text-gray-400 hover:text-white text-lg px-2" @click="closeLightbox">[✕]</button>
+            <span class="font-mono text-xs text-th-accent tracking-widest uppercase truncate">{{ lightboxAsset.role }} · {{ lightboxAsset.name }}</span>
+            <button class="font-mono text-th-text-secondary hover:text-th-text-primary text-lg px-2" @click="closeLightbox">[✕]</button>
           </div>
           <img
             v-if="lightboxAsset.kind === 'image'"
             :src="lightboxUrl"
-            class="max-w-[90vw] max-h-[78vh] object-contain shadow-[0_0_40px_rgba(0,0,0,0.8)]"
+            class="max-w-[90vw] max-h-[78vh] object-contain"
+            :style="{ boxShadow: 'var(--th-shadow-elevated)' }"
             :alt="lightboxAsset.name"
           />
           <video
@@ -470,10 +471,11 @@ function closeLightbox() {
             :src="lightboxUrl"
             controls
             autoplay
-            class="max-w-[90vw] max-h-[78vh] shadow-[0_0_40px_rgba(0,0,0,0.8)]"
+            class="max-w-[90vw] max-h-[78vh]"
+            :style="{ boxShadow: 'var(--th-shadow-elevated)' }"
           />
-          <div v-else-if="lightboxAsset.kind === 'audio'" class="w-[480px] max-w-[90vw] bg-ak-dark/80 border border-gray-700 p-8 flex flex-col items-center gap-4">
-            <svg class="w-16 h-16 text-ak-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-3c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" /></svg>
+          <div v-else-if="lightboxAsset.kind === 'audio'" class="w-[480px] max-w-[90vw] bg-th-bg-panel/80 border border-th-border p-8 flex flex-col items-center gap-4">
+            <svg class="w-16 h-16 text-th-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-3c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" /></svg>
             <audio :src="lightboxUrl" controls autoplay class="w-full" />
           </div>
         </div>

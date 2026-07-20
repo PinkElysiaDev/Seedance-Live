@@ -3,51 +3,52 @@
     <!-- Split Screen Layout -->
 
     <!-- Left Side: Controls 贯穿式条幅（普通 flex 子项，位于 main 居中区域左侧 = 中间偏左，高度贯通） -->
-    <div class="w-[450px] flex-shrink-0 h-full flex flex-col bg-ak-dark/95 backdrop-blur-md border-r border-gray-800 p-8 overflow-y-auto hide-scrollbar z-10 shadow-[10px_0_30px_rgba(0,0,0,0.85)] transition-shadow duration-500 ease-out hover:shadow-[14px_0_40px_rgba(0,0,0,0.9)]">
+    <div class="wb-panel w-[450px] flex-shrink-0 h-full flex flex-col backdrop-blur-md border-r border-th-border p-8 overflow-y-auto hide-scrollbar z-10" :style="{ backgroundColor: 'color-mix(in srgb, var(--th-bg-panel) 95%, transparent)' }">
 
       <!-- 顶部留白：让出 header 浮层 brand 高度，标题统一由 App.vue header 显示 -->
       <div class="h-[72px] flex-shrink-0"></div>
 
       <!-- Top: Provider Selector Dropdown -->
-      <div class="provider-dropdown-root mb-8 border-b border-gray-700 pb-4 relative">
-        <div class="font-sans font-bold text-gray-500 tracking-widest text-xs mb-1 uppercase">{{ t('wb.currentProvider') }}</div>
+      <div class="provider-dropdown-root mb-8 border-b border-th-border pb-4 relative">
+        <div class="font-sans font-bold text-th-text-muted tracking-widest text-xs mb-1 uppercase">{{ t('wb.currentProvider') }}</div>
         <div
-          class="flex items-center justify-between group cursor-pointer hover:text-ak-400 transition-colors"
+          class="flex items-center justify-between group cursor-pointer hover:text-th-accent transition-colors"
           @click="isProviderOpen = !isProviderOpen"
         >
-          <span class="font-sans font-black text-white text-xl tracking-wider group-hover:text-ak-400 transition-colors uppercase truncate">
+          <span class="font-sans font-black text-th-text-primary text-xl tracking-wider group-hover:text-th-accent transition-colors uppercase truncate">
             <template v-if="activeProfile">{{ activeProfile.name }}</template>
             <template v-else>{{ noProvider ? 'NO_PROVIDER' : '' }}</template>
-            // <span class="font-mono font-normal text-xs text-gray-500 group-hover:text-ak-400/80 transition-colors normal-case tracking-normal">{{ modelLabel }}</span>
+            // <span class="font-mono font-normal text-xs text-th-text-muted group-hover:text-th-accent/80 transition-colors normal-case tracking-normal">{{ modelLabel }}</span>
           </span>
-          <span class="font-mono text-gray-500 transition-transform" :class="{ 'rotate-180': isProviderOpen }">▼</span>
+          <span class="font-mono text-th-text-muted transition-transform" :class="{ 'rotate-180': isProviderOpen }">▼</span>
         </div>
 
         <!-- 渠道商切换下拉 -->
         <div
           v-if="isProviderOpen"
-          class="absolute left-0 right-0 top-full mt-2 z-30 bg-ak-dark border border-gray-700 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+          class="absolute left-0 right-0 top-full mt-2 z-30 border border-th-border"
+          :style="{ backgroundColor: 'var(--th-bg-panel)', boxShadow: 'var(--th-shadow-elevated)' }"
         >
-          <div class="px-4 py-2 font-sans font-bold text-gray-500 tracking-widest text-[10px] uppercase border-b border-gray-800">
+          <div class="px-4 py-2 font-sans font-bold text-th-text-muted tracking-widest text-[10px] uppercase border-b border-th-border">
             {{ t('wb.selectProvider') }}
           </div>
           <button
             v-for="p in settings.settings.profiles"
             :key="p.id"
             class="group relative flex items-center justify-between w-full text-left px-4 py-3 transition-colors"
-            :class="p.id === activeProfile?.id ? 'bg-ak-400/10 text-ak-400' : 'text-gray-300 hover:bg-ak-gray hover:text-white'"
+            :class="p.id === activeProfile?.id ? 'bg-th-accent/10 text-th-accent' : 'text-th-text-secondary hover:bg-th-bg-elevated hover:text-th-text-primary'"
             @click="selectProvider(p.id)"
           >
             <span class="flex flex-col min-w-0">
               <span class="font-sans font-bold text-sm tracking-wider uppercase truncate">{{ p.name }}</span>
-              <span class="font-mono text-[10px] text-gray-500 truncate">{{ p.kind === 'seedance' ? 'SEEDANCE' : 'CUSTOM' }} · {{ p.baseUrl || '—' }}</span>
+              <span class="font-mono text-[10px] text-th-text-muted truncate">{{ p.kind === 'seedance' ? 'SEEDANCE' : 'CUSTOM' }} · {{ p.baseUrl || '—' }}</span>
             </span>
-            <span v-if="p.id === activeProfile?.id" class="font-mono text-ak-400 ml-2">●</span>
+            <span v-if="p.id === activeProfile?.id" class="font-mono text-th-accent ml-2">●</span>
           </button>
-          <div v-if="!settings.settings.profiles.length" class="px-4 py-3 text-gray-600 font-mono text-xs">{{ t('wb.noProvidersConfigured') }}</div>
+          <div v-if="!settings.settings.profiles.length" class="px-4 py-3 text-th-text-muted font-mono text-xs">{{ t('wb.noProvidersConfigured') }}</div>
           <router-link
             to="/settings"
-            class="block px-4 py-3 border-t border-gray-800 font-sans font-bold text-[10px] tracking-widest uppercase text-gray-400 hover:text-ak-400 transition-colors"
+            class="block px-4 py-3 border-t border-th-border font-sans font-bold text-[10px] tracking-widest uppercase text-th-text-secondary hover:text-th-accent transition-colors"
             @click="isProviderOpen = false"
           >
             + {{ t('wb.configureProviders') }}
@@ -62,18 +63,18 @@
       <div class="mt-8 space-y-6">
 
         <div class="flex flex-col gap-2">
-           <div class="font-sans font-bold text-gray-500 tracking-widest text-xs uppercase">{{ t('wb.renderMode') }}</div>
-           <div class="flex bg-ak-gray p-1 w-full gap-1">
+           <div class="font-sans font-bold text-th-text-muted tracking-widest text-xs uppercase">{{ t('wb.renderMode') }}</div>
+           <div class="flex bg-th-bg-elevated p-1 w-full gap-1">
              <button
                class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-colors"
-               :class="activeMode === 'REF_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
+               :class="activeMode === 'REF_MODE' ? 'bg-th-accent text-th-on-accent' : 'text-th-text-secondary hover:text-th-text-primary'"
                @click="composer.setActiveMode('REF_MODE')"
              >
                {{ t('wb.modeReference') }}
              </button>
              <button
                class="flex-1 py-2 font-sans font-bold text-xs tracking-wider transition-colors"
-               :class="activeMode === 'KEYFRAME_MODE' ? 'bg-ak-400 text-ak-darker' : 'text-gray-400 hover:text-white'"
+               :class="activeMode === 'KEYFRAME_MODE' ? 'bg-th-accent text-th-on-accent' : 'text-th-text-secondary hover:text-th-text-primary'"
                @click="composer.setActiveMode('KEYFRAME_MODE')"
              >
                {{ t('wb.modeKeyframe') }}
@@ -96,46 +97,46 @@
         <AssetSlots v-if="activeMode === 'KEYFRAME_MODE'" :mode="'KEYFRAME_MODE'" class="w-full max-w-2xl" />
 
         <!-- Center Preview Box -->
-        <div class="w-full aspect-video border border-gray-600 relative group overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+        <div class="w-full aspect-video border border-th-border relative group overflow-hidden" :style="{ boxShadow: 'var(--th-shadow-panel)' }">
           <!-- Decorative corners -->
-          <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-ak-400 z-20"></div>
-          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-ak-400 z-20"></div>
+          <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-th-accent z-20"></div>
+          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-th-accent z-20"></div>
 
           <!-- Idle State Summary Content -->
-          <div v-if="!isRunning" class="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 p-8">
-            <div class="w-16 h-1 bg-ak-400 mb-6"></div>
-            <h2 class="font-sans font-black text-4xl text-white tracking-widest uppercase mb-4 text-center drop-shadow-md">
+          <div v-if="!isRunning" class="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 p-8" :style="{ backgroundColor: 'var(--th-bg-base)' }">
+            <div class="w-16 h-1 bg-th-accent mb-6"></div>
+            <h2 class="font-sans font-black text-4xl text-th-text-primary tracking-widest uppercase mb-4 text-center drop-shadow-md">
               {{ t('wb.waitingForData') }}
             </h2>
-            <div class="flex gap-4 font-mono text-sm text-gray-400">
-              <span class="bg-ak-gray px-2 py-1">{{ t('wb.mode') }}: {{ modeLabel }}</span>
-              <span class="bg-ak-gray px-2 py-1">{{ t('wb.ratio') }}: {{ composer.params.ratio }}</span>
-              <span class="bg-ak-gray px-2 py-1">{{ t('wb.res') }}: {{ composer.params.resolution }}</span>
-              <span class="bg-ak-gray px-2 py-1">{{ t('wb.duration') }}: {{ composer.params.duration }}s</span>
+            <div class="flex gap-4 font-mono text-sm text-th-text-secondary">
+              <span class="bg-th-bg-elevated px-2 py-1">{{ t('wb.mode') }}: {{ modeLabel }}</span>
+              <span class="bg-th-bg-elevated px-2 py-1">{{ t('wb.ratio') }}: {{ composer.params.ratio }}</span>
+              <span class="bg-th-bg-elevated px-2 py-1">{{ t('wb.res') }}: {{ composer.params.resolution }}</span>
+              <span class="bg-th-bg-elevated px-2 py-1">{{ t('wb.duration') }}: {{ composer.params.duration }}s</span>
             </div>
 
             <!-- 按需展示：仅当用户配置了对应项才出现 -->
-            <div v-if="hasOptionalParams" class="mt-3 flex flex-wrap gap-4 font-mono text-sm text-gray-400 justify-center">
-              <span v-if="composer.params.generateAudio" class="bg-ak-gray px-2 py-1">{{ t('wb.audioGen') }}</span>
-              <span v-if="composer.params.returnLastFrame" class="bg-ak-gray px-2 py-1">{{ t('wb.lastFrame') }}</span>
-              <span v-if="composer.params.watermark" class="bg-ak-gray px-2 py-1">{{ t('wb.watermark') }}</span>
-              <span v-if="composer.params.seed != null" class="bg-ak-gray px-2 py-1">{{ t('wb.randSeed') }}: {{ composer.params.seed }}</span>
+            <div v-if="hasOptionalParams" class="mt-3 flex flex-wrap gap-4 font-mono text-sm text-th-text-secondary justify-center">
+              <span v-if="composer.params.generateAudio" class="bg-th-bg-elevated px-2 py-1">{{ t('wb.audioGen') }}</span>
+              <span v-if="composer.params.returnLastFrame" class="bg-th-bg-elevated px-2 py-1">{{ t('wb.lastFrame') }}</span>
+              <span v-if="composer.params.watermark" class="bg-th-bg-elevated px-2 py-1">{{ t('wb.watermark') }}</span>
+              <span v-if="composer.params.seed != null" class="bg-th-bg-elevated px-2 py-1">{{ t('wb.randSeed') }}: {{ composer.params.seed }}</span>
             </div>
 
-            <div class="absolute bottom-6 left-6 font-sans text-xs text-gray-600 tracking-widest">
+            <div class="absolute bottom-6 left-6 font-sans text-xs text-th-text-muted tracking-widest">
               [[ System Standby ]]
             </div>
           </div>
 
           <!-- Running State -->
-          <div v-if="isRunning" class="absolute inset-0 flex flex-col items-center justify-center animate-[fade-in_1s_ease-out]">
+          <div v-if="isRunning" class="absolute inset-0 flex flex-col items-center justify-center animate-[fade-in_1s_ease-out]" :style="{ backgroundColor: 'var(--th-bg-base)' }">
             <div class="relative w-32 h-32 flex items-center justify-center mb-6">
               <!-- Animated rings -->
-              <div class="absolute inset-0 border-2 border-ak-400 rounded-full animate-ping opacity-20"></div>
-              <div class="absolute inset-4 border border-ak-400 rounded-full border-t-transparent animate-spin"></div>
-              <div class="font-sans font-black text-ak-400 text-xl tracking-widest">PROG</div>
+              <div class="absolute inset-0 border-2 border-th-accent rounded-full animate-ping opacity-20"></div>
+              <div class="absolute inset-4 border border-th-accent rounded-full border-t-transparent animate-spin"></div>
+              <div class="font-sans font-black text-th-accent text-xl tracking-widest">PROG</div>
             </div>
-            <div class="font-mono text-white tracking-widest text-sm">{{ t('wb.synchronizingCore') }}</div>
+            <div class="font-mono text-th-text-primary tracking-widest text-sm">{{ t('wb.synchronizingCore') }}</div>
           </div>
         </div>
 
@@ -213,5 +214,13 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 @keyframes fade-in {
   from { opacity: 0; filter: blur(10px); }
   to { opacity: 1; filter: blur(0); }
+}
+/* 左控制条方向阴影：ark=原版 10px_0_30px 黑，hover 14px_0_40px；白粉=粉色方向阴影 */
+.wb-panel {
+  box-shadow: var(--th-shadow-directional);
+  transition: box-shadow 0.5s ease-out;
+}
+.wb-panel:hover {
+  box-shadow: var(--th-shadow-directional-hover);
 }
 </style>

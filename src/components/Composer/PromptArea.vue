@@ -29,10 +29,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative w-full border-b-2 border-ak-darker focus-within:border-ak-400 transition-colors duration-300 group bg-ak-dark/50">
+  <div class="relative w-full border-b-2 border-th-bg-base focus-within:border-th-accent transition-colors duration-300 group" :style="{ backgroundColor: 'color-mix(in srgb, var(--th-bg-panel) 50%, transparent)' }">
     <!-- Top-left tag -->
-    <div class="absolute top-0 left-0 bg-ak-400 text-ak-darker font-sans font-bold text-[10px] px-2 py-0.5 flex items-center gap-1 z-10 tracking-widest">
-      <div class="w-1.5 h-1.5 bg-ak-darker"></div>
+    <div class="absolute top-0 left-0 bg-th-accent text-th-on-accent font-sans font-bold text-[10px] px-2 py-0.5 flex items-center gap-1 z-10 tracking-widest">
+      <div class="w-1.5 h-1.5 bg-th-on-accent"></div>
       {{ t('composer.promptInput') }}
     </div>
 
@@ -42,13 +42,14 @@ onMounted(() => {
       @input="onInput"
       :placeholder="t('composer.describeScene')"
       rows="3"
-      class="w-full bg-transparent mt-6 p-4 text-white font-sans text-sm outline-none resize-none placeholder-gray-600 tracking-wider"
+      class="w-full bg-transparent mt-6 p-4 text-th-text-primary font-sans text-sm outline-none resize-none placeholder-th-text-muted tracking-wider"
       style="min-height: 4.5rem; overflow-y: hidden;"
     />
 
     <div
-      class="absolute bottom-2 right-2 font-mono text-[10px] transition-colors bg-ak-darker/80 px-1 py-0.5"
-      :class="isOverSuggest ? 'text-red-500 animate-pulse' : 'text-gray-500 group-focus-within:text-ak-400'"
+      class="absolute bottom-2 right-2 font-mono text-[10px] transition-colors px-1 py-0.5"
+      :style="{ backgroundColor: 'color-mix(in srgb, var(--th-bg-base) 80%, transparent)' }"
+      :class="isOverSuggest ? 'text-th-error animate-pulse' : 'text-th-text-muted group-focus-within:text-th-accent'"
     >
       [ {{ count }} / {{ PROMPT_MAX }} ]
     </div>

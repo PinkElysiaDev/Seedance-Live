@@ -11,17 +11,17 @@ const emit = defineEmits<{ close: [] }>()
   <Teleport to="body">
     <Transition name="modal-pop">
     <div v-if="show" class="fixed inset-0 z-40 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="emit('close')" />
+      <div class="absolute inset-0 backdrop-blur-sm" :style="{ backgroundColor: 'var(--th-overlay)' }" @click="emit('close')" />
       <div
-        class="relative z-10 max-h-[90vh] w-full overflow-auto bg-ak-dark/95 backdrop-blur-md border border-ak-400/20 clip-chamfer-lg shadow-[0_0_30px_rgba(0,0,0,0.8)]"
-        :style="width ? { maxWidth: width } : { maxWidth: '640px' }"
+        class="relative z-10 max-h-[90vh] w-full overflow-auto backdrop-blur-md border border-th-accent/20 clip-chamfer-lg"
+        :style="{ backgroundColor: 'var(--th-bg-panel)', maxWidth: width || '640px', boxShadow: 'var(--th-shadow-panel)' }"
       >
-        <div v-if="title" class="flex items-center justify-between border-b border-ak-400/20 bg-ak-darker px-5 py-3">
-          <div class="flex items-center gap-2">
-            <span class="w-1.5 h-4 bg-ak-400 clip-chamfer"></span>
-            <h2 class="text-base font-sans italic font-bold text-white uppercase tracking-widest">{{ title }}</h2>
+        <div v-if="title" class="flex items-center justify-between border-b border-th-accent/20" :style="{ backgroundColor: 'var(--th-bg-base)' }">
+          <div class="flex items-center gap-2 px-5 py-3">
+            <span class="w-1.5 h-4 bg-th-accent clip-chamfer"></span>
+            <h2 class="text-base font-sans italic font-bold text-th-text-primary uppercase tracking-widest">{{ title }}</h2>
           </div>
-          <button class="font-mono text-gray-500 hover:text-ak-400 hover:scale-110 transition px-2" @click="emit('close')">[✕]</button>
+          <button class="font-mono text-th-text-muted hover:text-th-accent hover:scale-110 transition px-2" @click="emit('close')">[✕]</button>
         </div>
         <div class="p-5">
           <slot />

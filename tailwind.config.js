@@ -22,6 +22,26 @@ export default {
           800: '#111111',
           700: '#222222',
           border: '#333333',
+        },
+        // 主题感知色板：引用 CSS 变量，由 [data-theme=...] 切换。
+        // 组件用 text-th-accent / bg-th-bg-panel / border-th-border 等，
+        // 避免硬编码 ak-* 造成浅色主题（sakura-pearl）下不可见。
+        th: {
+          accent: 'var(--th-accent)',
+          'accent-dim': 'var(--th-accent-dim)',
+          'bg-base': 'var(--th-bg-base)',
+          'bg-panel': 'var(--th-bg-panel)',
+          'bg-elevated': 'var(--th-bg-elevated)',
+          border: 'var(--th-border)',
+          'text-primary': 'var(--th-text-primary)',
+          'text-secondary': 'var(--th-text-secondary)',
+          'text-muted': 'var(--th-text-muted)',
+          success: 'var(--th-success)',
+          warning: 'var(--th-warning)',
+          error: 'var(--th-error)',
+          'on-accent': 'var(--th-on-accent)',
+          // 模态/下拉遮罩色（浅色主题用粉褐半透明而非纯黑）
+          overlay: 'var(--th-overlay)',
         }
       },
       fontFamily: {
