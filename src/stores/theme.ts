@@ -64,7 +64,7 @@ export const useThemeStore = defineStore('theme', () => {
   // 初始化即应用，避免首屏闪烁
   applyToDom(prefs.value)
 
-  // 持久化
+  // 持久化（浅 watch：prefs 每次整体替换，无需 deep）
   watch(
     prefs,
     (val) => {
@@ -73,9 +73,7 @@ export const useThemeStore = defineStore('theme', () => {
       } catch {
         // 隐私模式等忽略
       }
-      applyToDom(val)
     },
-    { deep: true },
   )
 
   const themeId = computed(() => prefs.value.themeId)
@@ -89,12 +87,13 @@ export const useThemeStore = defineStore('theme', () => {
   const logoFile = computed(() => meta.value.logoFile)
   /** 是否浅色主题 */
   const isLight = computed(() => meta.value.light)
-  /** 当前强调色 */
-  const accentColor = computed(() => meta.value.accent)
 
   function setTheme(id: ThemeId) {
     if (!isThemeId(id)) return
     prefs.value = { ...prefs.value, themeId: id }
+    // 同步写 data-theme：cycleTheme 后冲击波 overlay 立即读到新主题变量，
+    // 无需 App.vue inline 覆盖补救
+    applyToDom(prefs.value)
   }
 
   function setSealSet(id: SealSetId) {
@@ -106,12 +105,11 @@ export const useThemeStore = defineStore('theme', () => {
     prefs.value = { ...prefs.value, transition: on }
   }
 
-  /** Logo 点击循环切换主题，返回新主题 id（供 App.vue 触发动效） */
-  function cycleTheme(): ThemeId {
+  /** Logo 点击循环切换主题 */
+  function cycleTheme(): void {
     const idx = CYCLE_ORDER.indexOf(prefs.value.themeId)
     const next = CYCLE_ORDER[(idx + 1) % CYCLE_ORDER.length]
     setTheme(next)
-    return next
   }
 
   return {
@@ -123,7 +121,6 @@ export const useThemeStore = defineStore('theme', () => {
     sealFiles,
     logoFile,
     isLight,
-    accentColor,
     setTheme,
     setSealSet,
     setTransition,

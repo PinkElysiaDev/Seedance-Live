@@ -118,7 +118,7 @@ export const customProvider: VideoProvider = {
       throw new Error(t('error.noTaskIdInResponse'))
     }
     log.info('submit', t('log.enqueuedLocal', { id: taskId }), undefined, task.id)
-    ctx.onEnqueued(taskId)
+    await ctx.onEnqueued(taskId)
     return { remoteTaskId: taskId }
   },
 
@@ -148,6 +148,7 @@ export const customProvider: VideoProvider = {
       signal,
       proxy,
       logCategory: 'poll',
+      retry: { retries: 2 },
     })
 
     log.debug('poll', t('log.rawPollResponse'), res)

@@ -73,10 +73,15 @@ export const DICTIONARY: Record<string, DictEntry> = {
   'toast.llmFailed': { zh: 'LLM 连接失败，详见调试日志', en: 'LLM connection failed, see debug logs' },
   'toast.aiApplied': { zh: '已应用 AI 解析结果，请检查后保存', en: 'AI parse result applied — please review and save' },
   'toast.tasksCleared': { zh: '已清空任务', en: 'Tasks cleared' },
+  'toast.tasksClearPartial': { zh: '已清理 {removed} 个任务，{failed} 个失败', en: 'Removed {removed} tasks; {failed} failed' },
   'toast.exported': { zh: '已导出', en: 'Exported' },
   'toast.exportFailed': { zh: '导出失败：{msg}', en: 'Export failed: {msg}' },
   'toast.imported': { zh: '已导入 {n} 个任务', en: 'Imported {n} tasks' },
+  'toast.importedDetailed': { zh: '已导入 {imported} 个任务，跳过 {skipped} 个', en: 'Imported {imported} tasks; skipped {skipped}' },
   'toast.importFailed': { zh: '导入失败：{msg}', en: 'Import failed: {msg}' },
+  'toast.backupTooLarge': { zh: '备份文件超过 500 MiB，无法在浏览器中安全导入', en: 'Backup exceeds 500 MiB and cannot be safely imported in the browser' },
+  'toast.storageUnavailable': { zh: '本地存储不可用，本次数据可能无法保存', en: 'Local storage is unavailable; this session may not be persisted' },
+  'toast.storageQuota': { zh: '本地存储空间不足，请清理数据后重试', en: 'Local storage quota is full; clear data and try again' },
 
   // ===== 设置说明文本（hint/notice）=====
   'hint.verboseLog': { zh: '关闭后仅记录 warn/error 级别日志', en: 'When off, only warn/error logs are recorded' },
@@ -85,6 +90,8 @@ export const DICTIONARY: Record<string, DictEntry> = {
   'notice.cors': { zh: '官方接口浏览器直连通常会被 CORS 拦截，需自备代理转发。代理脚本示例见 docs/proxy.md。', en: 'Direct browser access to the official API is usually blocked by CORS; provide your own proxy. See docs/proxy.md for an example.' },
   'notice.aiAssist': { zh: '配置大模型 API（OpenAI 兼容），用于在自定义源「AI 解析文档」时自动生成请求模板。支持具有 Vision 能力的模型。', en: 'Configure an OpenAI-compatible LLM to auto-generate request templates via "AI Parse Docs" for custom sources. Vision-capable models are supported.' },
   'notice.exportData': { zh: '导出包含任务、素材、视频与封面，可作为备份或迁移到其他设备。', en: 'Export includes tasks, assets, videos and covers — usable as a backup or for migrating to another device.' },
+  'notice.keyStorageRisk': { zh: '安全提示：API Key 会以明文保存在浏览器 localStorage。共享设备、XSS 或恶意扩展可能读取它。', en: 'Security: API keys are stored in plaintext localStorage. Shared devices, XSS, or malicious extensions may read them.' },
+  'notice.proxyKeyRisk': { zh: '代理会接收 Authorization/API Key。请仅使用自己部署且限制目标域名的代理。', en: 'The proxy receives your Authorization/API key. Only use a self-hosted proxy with an upstream allowlist.' },
 
   // ===== 确认框 =====
   'confirm.clearAllTasks': { zh: '确定清空所有任务历史？此操作不可撤销。', en: 'Clear all task history? This cannot be undone.' },

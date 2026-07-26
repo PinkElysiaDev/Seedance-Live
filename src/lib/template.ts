@@ -25,16 +25,31 @@ export interface TemplateVars {
 }
 
 // 渲染模板字符串
-// mode='json'：占位符（含可选两侧引号）替换为 JSON.stringify(value)，保证输出合法 JSON
-//   容错：{{var}} 与 "{{var}}" 都能正确渲染（字符串自动加引号，数组/数字/布尔直接插入）
+// mode='json'：
+//   整值替换："{{var}}" 或裸 {{var}} → JSON.stringify(value)
+//   字符串内插：占位符嵌在 JSON 字符串值内部（如 "Bearer {{apiKey}}"）→ 值做 JSON 转义后拼入
 // mode='raw' ：替换为原始字符串；{{taskId}} 做 encodeURIComponent
 export function renderTemplate(template: string, vars: TemplateVars, mode: TemplateMode): string {
   if (mode === 'json') {
-    // 匹配可选前导引号 + 占位符 + 可选后导引号，整体替换为 JSON 值
-    return template.replace(/"?\{\{\s*([\w.]+)\s*\}\}"?/g, (_full, key: string) => {
-      const value = resolveVar(vars, key)
+    // 1. 整值替换：占位符两侧有引号（"{{key}}"）→ 替换为 JSON.stringify(value)
+    let result = template.replace(/"{{(\s*[\w.]+\s*)}}"/g, (_full, raw: string) => {
+      const value = resolveVar(vars, raw.trim())
       return JSON.stringify(value ?? null)
     })
+    // 2. 剩余的 {{key}} — 区分"字符串内插"和"裸整值替换"
+    //    判断方式：如果占位符前面存在开引号（自上一个闭引号之后），说明在字符串内部
+    result = result.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, key: string, offset: number) => {
+      const value = resolveVar(vars, key)
+      if (isInsideJsonString(result, offset)) {
+        // 字符串内插：值做 JSON 转义后去掉外层引号
+        if (value === undefined || value === null) return ''
+        const escaped = JSON.stringify(String(value))
+        return escaped.slice(1, -1)
+      }
+      // 裸整值替换
+      return JSON.stringify(value ?? null)
+    })
+    return result
   }
   // raw
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_full, key: string) => {
@@ -43,6 +58,21 @@ export function renderTemplate(template: string, vars: TemplateVars, mode: Templ
     if (key === 'taskId' && typeof value === 'string') return encodeURIComponent(value)
     return String(value)
   })
+}
+
+// 判断 template 中 offset 位置是否处于 JSON 字符串值内部
+// 简化判断：从 offset 向左扫描，计数未转义的引号数量（奇数=在字符串内）
+function isInsideJsonString(template: string, offset: number): boolean {
+  let quoteCount = 0
+  for (let i = offset - 1; i >= 0; i--) {
+    if (template[i] === '"') {
+      // 检查是否被转义
+      let backslashes = 0
+      for (let j = i - 1; j >= 0 && template[j] === '\\'; j--) backslashes++
+      if (backslashes % 2 === 0) quoteCount++
+    }
+  }
+  return quoteCount % 2 === 1
 }
 
 function resolveVar(vars: TemplateVars, key: string): unknown {
