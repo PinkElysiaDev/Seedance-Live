@@ -16,6 +16,7 @@ import { useThemeStore } from '@/stores/theme'
 
 const props = defineProps<{ tab: 'provider' | 'proxy' | 'ai' | 'general' }>()
 const emit = defineEmits<{ close: [] }>()
+const MAX_BACKUP_FILE_BYTES = 500 * 1024 * 1024
 
 const { t, tBilingual } = useI18nStore()
 
@@ -170,10 +171,14 @@ function onAiApplied() {
   toast.show(t('toast.aiApplied'), 'success')
 }
 
-function clearAllTasks() {
+async function clearAllTasks() {
   if (!confirm(t('confirm.clearAllTasks'))) return
-  tasks.tasks.slice().forEach((task) => void tasks.removeTask(task.id))
-  toast.show(t('toast.tasksCleared'), 'success')
+  const result = await tasks.clearAllTasks()
+  if (result.failed) {
+    toast.show(t('toast.tasksClearPartial', result), 'error')
+  } else {
+    toast.show(t('toast.tasksCleared'), 'success')
+  }
 }
 
 const importInput = ref<HTMLInputElement | null>(null)
@@ -197,10 +202,15 @@ async function onImportFile(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  if (file.size > MAX_BACKUP_FILE_BYTES) {
+    toast.show(t('toast.backupTooLarge'), 'error')
+    input.value = ''
+    return
+  }
   try {
     const text = await file.text()
     const res = await tasks.importData(text)
-    toast.show(t('toast.imported', { n: res.count }), 'success')
+    toast.show(t('toast.importedDetailed', res), 'success')
   } catch (err) {
     toast.show(t('toast.importFailed', { msg: err instanceof Error ? err.message : String(err) }), 'error')
   }
@@ -238,6 +248,7 @@ async function onImportFile(e: Event) {
           <label class="block md:col-span-2 flex flex-col gap-2">
             <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.authToken') }} //</span>
             <input :value="profile.apiKey" type="password" placeholder="Bearer token" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchProfile({ apiKey: ($event.target as HTMLInputElement).value })" />
+            <span class="text-[10px] font-mono text-th-warning leading-relaxed">{{ t('notice.keyStorageRisk') }}</span>
           </label>
           <label v-if="profile.kind === 'custom'" class="block md:col-span-2 flex flex-col gap-2">
             <span class="text-xs font-mono text-th-accent block tracking-wider">{{ t('form.modelOverride') }} //</span>
@@ -384,6 +395,7 @@ async function onImportFile(e: Event) {
           <span class="text-th-accent font-bold">// NOTICE:</span> {{ t('notice.cors') }}
         </p>
       </div>
+      <p class="border-l-2 border-th-warning/60 bg-th-warning/5 px-3 py-2 text-[10px] font-mono leading-relaxed text-th-warning">{{ t('notice.proxyKeyRisk') }}</p>
 
       <div class="space-y-6 p-6 bg-th-bg-panel/50 border border-th-border">
         <div class="flex flex-col gap-2">
@@ -422,6 +434,7 @@ async function onImportFile(e: Event) {
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.authToken') }} //</span>
           <input :value="settings.settings.llmConfig?.apiKey ?? ''" type="password" class="w-full bg-th-bg-panel border-b border-th-border text-th-text-primary font-mono text-sm py-2 focus:border-th-accent outline-none transition" @input="patchLlm({ apiKey: ($event.target as HTMLInputElement).value })" />
+          <span class="text-[10px] font-mono text-th-warning leading-relaxed">{{ t('notice.keyStorageRisk') }}</span>
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-mono text-xs text-th-accent tracking-wider">{{ t('form.modelIdVision') }} //</span>

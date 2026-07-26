@@ -28,7 +28,8 @@ export const useI18nStore = defineStore('i18n', () => {
     let text = entry ? entry[locale.value] : key
     if (params) {
       for (const [k, v] of Object.entries(params)) {
-        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
+        // 使用函数替换避免 $& / $' 等被当作替换模式
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), () => String(v))
       }
     }
     return text

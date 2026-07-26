@@ -64,7 +64,7 @@ export const seedanceProvider: VideoProvider = {
     log.debug('submit', t('log.rawSubmitResponse'), res, task.id)
     const remoteTaskId = extractTaskId(res)
     log.info('submit', t('log.enqueuedLocal', { id: remoteTaskId }), undefined, task.id)
-    ctx.onEnqueued(remoteTaskId)
+    await ctx.onEnqueued(remoteTaskId)
     return { remoteTaskId }
   },
 
@@ -83,6 +83,7 @@ export const seedanceProvider: VideoProvider = {
       signal,
       proxy,
       logCategory: 'poll',
+      retry: { retries: 2 },
     })
     log.debug('poll', t('log.rawPollResponse'), res)
     const task = parseTask(res)

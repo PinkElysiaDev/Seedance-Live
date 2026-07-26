@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch, ref, computed } from 'vue'
+import { onMounted, onBeforeUnmount, watch, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useTasksStore } from '@/stores/tasks'
@@ -8,6 +8,7 @@ import { useLogsStore } from '@/stores/logs'
 import { useComposerStore } from '@/stores/composer'
 import { useI18nStore } from '@/stores/i18n'
 import { useThemeStore } from '@/stores/theme'
+import { useToastStore } from '@/stores/toast'
 import GlobalBackground from '@/components/common/GlobalBackground.vue'
 import Toast from '@/components/common/Toast.vue'
 
@@ -21,6 +22,7 @@ const i18n = useI18nStore()
 const { locale } = storeToRefs(i18n)
 const { t, toggleLocale } = i18n
 const theme = useThemeStore()
+const toast = useToastStore()
 const route = useRoute()
 
 // 布局用的首页标志：与路由解耦，仅在路由过渡"空档"（旧页已离场、新页未可见）切换。
@@ -36,7 +38,6 @@ const soak = ref(false)
 const flash = ref(false)
 const logoCharging = ref(false)
 let effectTimer: number | undefined
-const accentColor = computed(() => theme.accentColor)
 const isLight = computed(() => theme.isLight)
 
 function playThemeTransition() {
@@ -67,10 +68,18 @@ function onLogoClick() {
 onMounted(async () => {
   logs.setVerbose(settings.settings.verboseLogs)
   // 并发：水合编辑器素材（刷新后恢复）+ 恢复未完成任务轮询
-  await Promise.all([composer.initAssets(), tasks.initTasks()])
+  const initResults = await Promise.allSettled([composer.initAssets(), tasks.initTasks()])
+  if (initResults.some((result) => result.status === 'rejected')) {
+    toast.show(t('toast.storageUnavailable'), 'error', 7000)
+  }
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {})
   }
+})
+
+// 清理主题切换动效计时器，避免卸载瞬间泄漏
+onBeforeUnmount(() => {
+  if (effectTimer) window.clearTimeout(effectTimer)
 })
 
 watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
@@ -88,14 +97,20 @@ watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
       <div class="mx-auto flex max-w-7xl items-center justify-between px-8">
         <!-- Logo Area：点击 Logo 切换主题；白粉主题下 logo 为爱莉西雅刻印 -->
         <div class="flex items-center gap-4 opacity-90">
-          <img
-            :src="`/images/${theme.logoFile}`"
-            class="logo-glow h-10 w-auto object-contain cursor-pointer transition-transform"
-            :class="{ 'logo-charging': logoCharging }"
-            :alt="t('theme.cycleTooltip')"
+          <button
+            type="button"
+            class="bg-transparent p-0 border-0 cursor-pointer"
+            :aria-label="t('theme.cycleTooltip')"
             :title="t('theme.cycleTooltip')"
             @click="onLogoClick"
-          />
+          >
+            <img
+              :src="`/images/${theme.logoFile}`"
+              class="logo-glow h-10 w-auto object-contain transition-transform"
+              :class="{ 'logo-charging': logoCharging }"
+              alt="SEEDANCE LIVE"
+            />
+          </button>
           <span class="font-sans font-black text-2xl tracking-widest text-th-text-primary uppercase leading-none">
             SEEDANCE <span class="text-th-accent font-light">LIVE</span>
           </span>
@@ -167,26 +182,22 @@ watch(() => settings.settings.verboseLogs, (v) => logs.setVerbose(v))
 
   <!-- 主题切换仪式动效 overlay -->
   <Teleport to="body">
-    <!-- 能量浸染蒙版（主题色极淡） -->
+    <!-- 能量浸染蒙版（主题色极淡，读 <html> 主题变量，切换时已同步更新） -->
     <div
       v-if="soak"
-      class="theme-soak-overlay fixed inset-0 pointer-events-none z-[100]"
-      :style="{ backgroundColor: accentColor }"
+      class="theme-soak-overlay fixed inset-0 pointer-events-none z-[100] bg-[var(--th-accent)]"
     ></div>
     <!-- 浅色主题白光闪现 -->
     <div
       v-if="flash"
       class="theme-flash-overlay fixed inset-0 pointer-events-none z-[101] bg-white"
     ></div>
-    <!-- 冲击波环 -->
+    <!-- 冲击波环（读 <html> 主题变量，无需 inline 覆盖） -->
     <div
       v-if="shockwave"
       class="fixed inset-0 pointer-events-none z-[102] flex items-center justify-center"
     >
-      <div
-        class="theme-shockwave-ring"
-        :style="{ '--th-accent': accentColor, '--th-accent-glow': accentColor }"
-      ></div>
+      <div class="theme-shockwave-ring"></div>
     </div>
   </Teleport>
 </template>

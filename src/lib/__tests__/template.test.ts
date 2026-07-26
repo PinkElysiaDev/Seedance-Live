@@ -59,6 +59,22 @@ describe('renderTemplate json mode', () => {
     expect(o.images).toEqual(vars.images)
     expect(o.ratio).toBe('16:9')
   })
+
+  it('正确转义引号、换行、反斜杠和 Unicode', () => {
+    const special = { ...vars, prompt: '他说 "你好"\n路径 C:\\tmp\\文件' }
+    const output = renderTemplate('{"prompt":"{{prompt}}"}', special, 'json')
+    expect(JSON.parse(output).prompt).toBe(special.prompt)
+  })
+
+  it('prompt 包含 }} 不会破坏模板', () => {
+    const special = { ...vars, prompt: '镜头结束 }} 再切换' }
+    const output = renderTemplate('{"prompt":{{prompt}}}', special, 'json')
+    expect(JSON.parse(output).prompt).toBe(special.prompt)
+  })
+
+  it('未知变量在 JSON 模式替换为 null', () => {
+    expect(JSON.parse(renderTemplate('{"value":{{unknown}}}', vars, 'json')).value).toBeNull()
+  })
 })
 
 describe('renderTemplate raw mode', () => {

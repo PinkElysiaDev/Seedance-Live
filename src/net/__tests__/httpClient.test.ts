@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { buildApiUrl } from '@/net/httpClient'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { buildApiUrl, httpFetch } from '@/net/httpClient'
 import { applyProxy } from '@/net/proxy'
 import type { ProxyConfig } from '@/types'
 
@@ -38,5 +39,31 @@ describe('applyProxy', () => {
   it('path 模式', () => {
     const p: ProxyConfig = { enabled: true, url: 'https://proxy.workers.dev/', mode: 'path' }
     expect(applyProxy('https://a.com/x', p)).toBe('https://proxy.workers.dev/' + encodeURIComponent('https://a.com/x'))
+  })
+})
+
+describe('httpFetch retry', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+  afterEach(() => vi.restoreAllMocks())
+
+  it('exports the retry-capable client', () => {
+    expect(httpFetch).toBeTypeOf('function')
+  })
+
+  it('does not retry POST', async () => {
+    const request = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 502 }))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await expect(httpFetch('test', { method: 'POST', retry: { retries: 2 } })).rejects.toMatchObject({ status: 502 })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries GET 502 without error noise', async () => {
+    const request = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('', { status: 502 }))
+      .mockResolvedValueOnce(Response.json({ ok: true }))
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await expect(httpFetch('test', { retry: { retries: 1, backoffMs: 0, maxBackoffMs: 0 } })).resolves.toEqual({ ok: true })
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(errors).not.toHaveBeenCalled()
   })
 })

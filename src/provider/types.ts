@@ -7,7 +7,7 @@ export interface SubmitContext {
   proxy?: ProxyConfig
   signal: AbortSignal
   timeoutSec?: number             // submit 单次请求超时
-  onEnqueued: (remoteTaskId: string) => void
+  onEnqueued: (remoteTaskId: string) => Promise<void>
   onProgress?: (p: number) => void
 }
 

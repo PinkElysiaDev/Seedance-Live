@@ -12,7 +12,7 @@
 [data-theme="sakura-pearl"] {
   --th-accent: #FF7FB2;
   --th-accent-dim: #E85F94;
-  --th-accent-glow: rgba(255, 127, 178, 0.35);
+  --th-accent-glow: rgba(var(--th-accent-rgb), 0.35);
   --th-bg-base: #FAF6F8;
   --th-bg-panel: #FFFFFF;
   --th-bg-elevated: #F3EAEE;
@@ -59,7 +59,7 @@
 [data-theme="ark-cyan"] {
   --th-accent: #00E5FF;
   --th-accent-dim: #00B8D4;
-  --th-accent-glow: rgba(0, 229, 255, 0.4);
+  --th-accent-glow: rgba(var(--th-accent-rgb), 0.4);
   --th-bg-base: #0a0a0a;
   --th-bg-panel: #111111;
   --th-bg-elevated: #1a1a1a;

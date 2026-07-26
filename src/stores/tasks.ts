@@ -1,109 +1,99 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import type { VideoTask, StoredAsset } from '@/types'
+import { onScopeDispose, ref } from 'vue'
+import type { ProxyConfig, StoredAsset, VideoTask } from '@/types'
 import { generateId } from '@/lib/id'
-import { isRecoverableError, type ProxyConfig } from '@/types'
-import { resolveProvider } from '@/provider/resolve'
-import type { SubmitContext } from '@/provider/types'
 import { validateTask } from '@/lib/validate'
-import { captureCover } from '@/lib/video'
-import { blobToDataUrl, isHttpUrl, dataUrlToBlob } from '@/lib/blob'
+import { dataUrlToBlob } from '@/lib/blob'
 import {
-  putTask,
-  getAllTasks,
-  deleteTask as dbDeleteTask,
-  putBlob,
-  putCover,
-  putAsset,
-  getAssets,
-  getBlob,
-  getCover,
   deleteBlob,
   deleteCover,
-  getAllAssets,
-  getAllBlobs,
-  getAllCovers,
+  deleteAsset,
+  deleteTask as dbDeleteTask,
+  getAsset,
+  getAllTasks,
+  getBlob,
+  getCover,
+  putContinueFrame,
+  putTask,
 } from '@/db/repos'
-import {
-  POLL_MAX_DURATION_SEC,
-  POLL_LOG_EVERY_SEC,
-  SUBMIT_TIMEOUT_SEC,
-  RECOVER_DELAY_MS,
-  RECOVER_MAX_ATTEMPTS,
-} from '@/config/options'
+import { StorageError } from '@/db/index'
+import { createTaskRunner } from '@/scheduler/taskRunner'
+import { exportTaskBackup, importTaskBackup } from '@/services/taskBackup'
 import { log } from '@/lib/logger'
 import { useI18nStore } from './i18n'
 import { useSettingsStore } from './settings'
 import { useComposerStore } from './composer'
-
-// 模块级调度状态：定时器、请求控制器、重连次数均按 taskId 维护
-const timers = new Map<string, ReturnType<typeof setTimeout>>()
-const abortControllers = new Map<string, AbortController>()
-const recoverAttempts = new Map<string, number>()
-
-function clearTimer(taskId: string) {
-  const t = timers.get(taskId)
-  if (t) {
-    clearTimeout(t)
-    timers.delete(taskId)
-  }
-}
-
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(resolve, ms)
-    if (signal) {
-      signal.addEventListener('abort', () => {
-        clearTimeout(t)
-        reject(new Error('aborted'))
-      }, { once: true })
-    }
-  })
-}
-
-// 下载远程资源为 Blob（CORS 失败则返回 null，调用方按需兜底）
-async function fetchBlob(url: string, signal: AbortSignal): Promise<Blob | null> {
-  try {
-    const res = await fetch(url, { signal })
-    if (!res.ok) return null
-    return await res.blob()
-  } catch {
-    return null
-  }
-}
-
-async function downloadVideoBlob(url: string, signal: AbortSignal): Promise<Blob | null> {
-  const blob = await fetchBlob(url, signal)
-  if (!blob) return null
-  if (!blob.type.startsWith('video/') && blob.size === 0) return null
-  return blob
-}
-
-async function downloadImageCover(url: string, signal: AbortSignal): Promise<string | null> {
-  const blob = await fetchBlob(url, signal)
-  return blob ? blobToDataUrl(blob) : null
-}
+import { useToastStore } from './toast'
 
 export const useTasksStore = defineStore('tasks', () => {
   const tasks = ref<VideoTask[]>([])
   const isInitialized = ref(false)
   const { t: tr } = useI18nStore()
+  const toast = useToastStore()
+  let lastStorageToastAt = 0
 
   function findTask(id: string): VideoTask | undefined {
-    return tasks.value.find((t) => t.id === id)
+    return tasks.value.find((task) => task.id === id)
+  }
+
+  function replaceTask(task: VideoTask) {
+    const index = tasks.value.findIndex((item) => item.id === task.id)
+    if (index >= 0) tasks.value[index] = task
   }
 
   async function updateTask(id: string, patch: Partial<VideoTask>) {
-    const idx = tasks.value.findIndex((t) => t.id === id)
-    if (idx < 0) return
-    tasks.value[idx] = { ...tasks.value[idx], ...patch }
-    await putTask(tasks.value[idx])
+    const current = findTask(id)
+    if (!current) return
+    const next = { ...current, ...patch }
+    await putTask(next)
+    replaceTask(next)
   }
 
-  /**
-   * 提交当前 composer 草稿为生成任务：校验 → 入库 → 异步执行（提交 + 轮询）。
-   * 成功返回 taskId；失败返回 error（此时任务未入库）。
-   */
+  function notifyStorageError(error: unknown) {
+    if (!(error instanceof StorageError)) return
+    const now = Date.now()
+    if (now - lastStorageToastAt < 3000) return
+    lastStorageToastAt = now
+    const key = error.kind === 'quota' ? 'toast.storageQuota' : 'toast.storageUnavailable'
+    toast.show(tr(key), 'error', 7000)
+    log.error('task', tr(key), error.message)
+  }
+
+  function getProfile(task: VideoTask) {
+    const settings = useSettingsStore()
+    return settings.settings.profiles.find((profile) => profile.id === task.providerId) ?? settings.activeProfile
+  }
+
+  function getProxy(): ProxyConfig | undefined {
+    const settings = useSettingsStore()
+    return settings.proxy.enabled ? settings.proxy : undefined
+  }
+
+  function notifySucceeded(task: VideoTask) {
+    const settings = useSettingsStore()
+    if (!settings.settings.notifyOnComplete || !('Notification' in window)) return
+    try {
+      if (Notification.permission === 'granted') {
+        new Notification(tr('notify.title'), { body: task.prompt.slice(0, 60) })
+      }
+    } catch {
+      // 浏览器拒绝通知时不影响任务状态。
+    }
+  }
+
+  const runner = createTaskRunner({
+    getTask: findTask,
+    patchTask: updateTask,
+    replaceTask,
+    getProfile,
+    getProxy,
+    getPollIntervalSec: () => useSettingsStore().settings.pollIntervalSec,
+    translate: tr,
+    onStorageError: notifyStorageError,
+    onSucceeded: notifySucceeded,
+  })
+  onScopeDispose(() => runner.dispose())
+
   async function submitTask(): Promise<{ ok: boolean; error?: string; taskId?: string }> {
     const composer = useComposerStore()
     const settings = useSettingsStore()
@@ -131,284 +121,45 @@ export const useTasksStore = defineStore('tasks', () => {
     tasks.value.unshift(task)
     try {
       await putTask(task)
-    } catch (err) {
-      // 入库失败（如 IndexedDB 序列化问题）：回滚内存、记日志、上报
-      tasks.value = tasks.value.filter((t) => t.id !== task.id)
-      const msg = tr('error.persistFailed', { msg: errMessage(err) })
-      log.error('task', msg, undefined, task.id)
-      return { ok: false, error: msg }
+    } catch (error) {
+      tasks.value = tasks.value.filter((item) => item.id !== task.id)
+      notifyStorageError(error)
+      const message = tr('error.persistFailed', { msg: errorMessage(error) })
+      return { ok: false, error: message }
     }
 
     if (settings.settings.clearComposerAfterSubmit) composer.clearAfterSubmit()
-
-    void executeTask(task.id)
+    void runner.execute(task.id)
     return { ok: true, taskId: task.id }
   }
 
-  // —— 执行：提交 + 进入轮询 ——
-  async function executeTask(taskId: string) {
-    const settings = useSettingsStore()
-    const task = findTask(taskId)
-    if (!task) return
-    const profile = settings.settings.profiles.find((p) => p.id === task.providerId) ?? settings.activeProfile
-    const provider = resolveProvider(profile)
-    const proxy: ProxyConfig | undefined = settings.proxy.enabled ? settings.proxy : undefined
-
-    const controller = new AbortController()
-    abortControllers.set(taskId, controller)
-
-    // 先记日志，再做状态更新：即使后续步骤崩溃，至少留有提交开始的痕迹
-    log.info('submit', tr('log.submitStarted', { kind: profile.kind }), { profile: profile.name, model: profile.model || task.params.model, prompt: task.prompt.slice(0, 60) }, taskId)
-    try {
-      await updateTask(taskId, { status: 'running', error: null })
-    } catch (err) {
-      log.error('submit', tr('log.stateUpdateFailed', { msg: errMessage(err) }), undefined, taskId)
-    }
-
-    const assets = await getAssets(task.assetIds)
-    const ctx: SubmitContext = {
-      task,
-      assets,
-      profile,
-      proxy,
-      signal: controller.signal,
-      timeoutSec: SUBMIT_TIMEOUT_SEC,
-      onEnqueued: async (remoteTaskId) => {
-        log.info('submit', tr('log.enqueued', { id: remoteTaskId }), undefined, taskId)
-        await updateTask(taskId, { remoteTaskId, recoverable: false, remoteStatus: 'queued' })
-      },
-    }
-
-    try {
-      await provider.submit(ctx)
-      await startPolling(taskId)
-    } catch (err) {
-      if (controller.signal.aborted) {
-        log.info('submit', tr('log.submitCancelled'), undefined, taskId)
-        return
-      }
-      const msg = errMessage(err)
-      if (isRecoverableError(err)) {
-        log.warn('submit', tr('log.submitRecoverable', { msg }), undefined, taskId)
-        await markRecoverable(taskId, msg)
-        scheduleRecover(taskId)
-      } else {
-        log.error('submit', tr('log.submitFailed', { msg }), undefined, taskId)
-        await updateTask(taskId, {
-          status: 'failed',
-          error: msg,
-          finishedAt: Date.now(),
-          elapsed: Date.now() - task.createdAt,
-        })
-      }
-    }
-  }
-
-  // —— 轮询 ——
-  async function startPolling(taskId: string) {
-    const settings = useSettingsStore()
-    const task = findTask(taskId)
-    if (!task || !task.remoteTaskId) {
-      log.warn('poll', tr('log.pollCannotStart'), { taskId }, taskId)
-      return
-    }
-    const profile = settings.settings.profiles.find((p) => p.id === task.providerId) ?? settings.activeProfile
-    const provider = resolveProvider(profile)
-    const proxy: ProxyConfig | undefined = settings.proxy.enabled ? settings.proxy : undefined
-    const controller = abortControllers.get(taskId) ?? new AbortController()
-    abortControllers.set(taskId, controller)
-
-    const intervalSec =
-      profile.kind === 'custom' && profile.custom?.pollIntervalSec
-        ? profile.custom.pollIntervalSec
-        : settings.settings.pollIntervalSec
-    const maxDurationMs = POLL_MAX_DURATION_SEC * 1000
-    const startedAt = Date.now()
-    let lastHeartbeat = 0
-    log.info('poll', tr('log.pollStarted', { id: task.remoteTaskId, interval: intervalSec, max: POLL_MAX_DURATION_SEC }), undefined, taskId)
-
-    while (true) {
-      if (controller.signal.aborted) {
-        log.info('poll', tr('log.pollCancelled'), undefined, taskId)
-        return
-      }
-      const elapsedMs = Date.now() - startedAt
-      if (elapsedMs > maxDurationMs) {
-        log.error('poll', tr('log.pollTimeout', { n: Math.round(elapsedMs / 1000), max: POLL_MAX_DURATION_SEC }), undefined, taskId)
-        await updateTask(taskId, {
-          status: 'failed',
-          error: tr('error.timeout', { n: Math.round(elapsedMs / 1000) }),
-          finishedAt: Date.now(),
-          elapsed: Date.now() - (findTask(taskId)?.createdAt ?? Date.now()),
-        })
-        return
-      }
-      try {
-        const result = await provider.poll(profile, task.remoteTaskId, controller.signal, proxy)
-        if (result.status === 'succeeded') {
-          log.info('poll', tr('log.pollSuccess'), undefined, taskId)
-          await finalizeSuccess(taskId, result, controller.signal)
-          return
-        }
-        if (result.status === 'failed' || result.status === 'cancelled' || result.status === 'expired') {
-          log.warn('poll', tr('log.pollTerminal', { status: result.status }), { error: result.error }, taskId)
-          await updateTask(taskId, {
-            status: result.status,
-            error: result.error ?? tr('error.genFailed', { status: result.status }),
-            errorDetails: result.details,
-            finishedAt: Date.now(),
-            elapsed: Date.now() - (findTask(taskId)?.createdAt ?? Date.now()),
-          })
-          return
-        }
-        // running：更新状态，定期心跳日志
-        await updateTask(taskId, { remoteStatus: result.status, progress: result.progress })
-        const now = Date.now()
-        if (now - lastHeartbeat >= POLL_LOG_EVERY_SEC * 1000) {
-          lastHeartbeat = now
-          log.info('poll', tr('log.pollRunning', { n: Math.round((now - startedAt) / 1000) }), { remoteStatus: result.status, progress: result.progress }, taskId)
-        }
-      } catch (err) {
-        if (controller.signal.aborted) return
-        const msg = errMessage(err)
-        if (isRecoverableError(err)) {
-          log.warn('poll', tr('log.pollRecoverable', { msg }), undefined, taskId)
-          await markRecoverable(taskId, msg)
-          scheduleRecover(taskId)
-          return
-        }
-        // 非 recoverable 错误（如 HTTP 4xx/5xx）：记录后继续轮询，直到总时长耗尽
-        log.warn('poll', tr('log.pollErrorRetry', { msg }), undefined, taskId)
-      }
-      try {
-        await sleep(intervalSec * 1000, controller.signal)
-      } catch {
-        return // aborted
-      }
-    }
-  }
-
-  // 成功收尾：下载视频 blob + 生成 cover + 下载末帧
-  async function finalizeSuccess(
-    taskId: string,
-    result: { videoUrl?: string; lastFrameUrl?: string; coverUrl?: string },
-    signal: AbortSignal,
-  ) {
-    const task = findTask(taskId)
-    if (!task) return
-    if (!result.videoUrl) {
-      await updateTask(taskId, { status: 'failed', error: tr('error.noVideoUrl'), finishedAt: Date.now() })
-      return
-    }
-    let videoBlobId: string | undefined
-    let coverImageId: string | undefined
-    let lastFrameImageId: string | undefined
-    const fallbackUrl = result.videoUrl
-
-    log.info('poll', `开始下载视频 ${fallbackUrl?.slice(0, 80)}`, undefined, taskId)
-    const blob = await downloadVideoBlob(result.videoUrl, signal)
-    if (blob) {
-      const blobId = generateId()
-      await putBlob({ id: blobId, buffer: await blob.arrayBuffer(), mime: blob.type || 'video/mp4' })
-      videoBlobId = blobId
-      log.info('poll', tr('log.videoDownloaded', { n: blob.size }), undefined, taskId)
-      try {
-        const cover = await captureCover(blob)
-        const coverId = generateId()
-        await putCover({ id: coverId, dataUrl: cover })
-        coverImageId = coverId
-      } catch (err) {
-        log.warn('poll', tr('log.coverFailed', { msg: errMessage(err) }), undefined, taskId)
-      }
-    } else {
-      // 下载失败（常见为 CORS），保留远程 URL 兜底并记日志
-      log.warn('poll', tr('log.videoDownloadFailed'), { url: fallbackUrl }, taskId)
-    }
-    // 末帧续帧图
-    if (result.lastFrameUrl) {
-      if (isHttpUrl(result.lastFrameUrl)) {
-        const coverDataUrl = await downloadImageCover(result.lastFrameUrl, signal)
-        if (coverDataUrl) {
-          const coverId = generateId()
-          await putCover({ id: coverId, dataUrl: coverDataUrl })
-          lastFrameImageId = coverId
-        }
-      }
-    }
-
-    await updateTask(taskId, {
-      status: 'succeeded',
-      videoBlobId,
-      videoUrl: fallbackUrl,
-      coverImageId,
-      lastFrameImageId,
-      finishedAt: Date.now(),
-      elapsed: Date.now() - task.createdAt,
-    })
-
-    const settings = useSettingsStore()
-    if (settings.settings.notifyOnComplete && 'Notification' in window) {
-      try {
-        if (Notification.permission === 'granted') {
-          new Notification(tr('notify.title'), { body: task.prompt.slice(0, 60) })
-        }
-      } catch {
-        // 忽略
-      }
-    }
-  }
-
-  async function markRecoverable(taskId: string, error: string) {
-    log.warn('task', tr('log.taskRecoverable', { msg: error }), undefined, taskId)
-    await updateTask(taskId, { status: 'running', recoverable: true, error })
-  }
-
-  // —— 恢复调度 ——
-  function scheduleRecover(taskId: string) {
-    clearTimer(taskId)
-    const attempts = (recoverAttempts.get(taskId) ?? 0) + 1
-    recoverAttempts.set(taskId, attempts)
-    if (attempts > RECOVER_MAX_ATTEMPTS) {
-      log.error('task', tr('log.recoverExhausted', { n: attempts }), undefined, taskId)
-      recoverAttempts.delete(taskId)
-      void updateTask(taskId, {
-        status: 'failed',
-        error: tr('error.recoverExhausted'),
-        recoverable: false,
-        finishedAt: Date.now(),
-      })
-      return
-    }
-    log.info('task', tr('log.recoverRetry', { delay: RECOVER_DELAY_MS / 1000, attempt: attempts, max: RECOVER_MAX_ATTEMPTS }), undefined, taskId)
-    const t = setTimeout(() => {
-      timers.delete(taskId)
-      void startPolling(taskId)
-    }, RECOVER_DELAY_MS)
-    timers.set(taskId, t)
-  }
-
-  // —— 取消 ——
   async function cancelTask(taskId: string) {
-    log.info('task', tr('log.taskCancelled'), undefined, taskId)
-    const controller = abortControllers.get(taskId)
-    controller?.abort()
-    abortControllers.delete(taskId)
-    clearTimer(taskId)
-    recoverAttempts.delete(taskId)
-    await updateTask(taskId, { status: 'cancelled', finishedAt: Date.now(), recoverable: false })
+    const task = findTask(taskId)
+    if (!task) return
+    runner.cancel(taskId)
+    const cancelled: VideoTask = {
+      ...task,
+      status: 'cancelled',
+      recoverable: false,
+      finishedAt: Date.now(),
+    }
+    replaceTask(cancelled)
+    try {
+      await putTask(cancelled)
+    } catch (error) {
+      notifyStorageError(error)
+    }
   }
 
-  // —— 重试 ——
   async function retryTask(taskId: string) {
     const task = findTask(taskId)
     if (!task) return
-    log.info('task', tr('log.taskRetry'), undefined, taskId)
-    clearTimer(taskId)
-    recoverAttempts.delete(taskId)
-    abortControllers.delete(taskId)
-    await updateTask(taskId, {
+    runner.reset(taskId)
+    const retried: VideoTask = {
+      ...task,
       status: 'queued',
       error: null,
+      errorDetails: undefined,
       recoverable: false,
       remoteTaskId: undefined,
       remoteStatus: undefined,
@@ -416,100 +167,119 @@ export const useTasksStore = defineStore('tasks', () => {
       finishedAt: null,
       elapsed: null,
       createdAt: Date.now(),
-    })
-    void executeTask(taskId)
+    }
+    try {
+      await putTask(retried)
+    } catch (error) {
+      notifyStorageError(error)
+    }
+    replaceTask(retried)
+    void runner.execute(taskId)
   }
 
-  // —— 删除 ——
   async function removeTask(taskId: string) {
-    await cancelTask(taskId)
+    runner.cancel(taskId)
     const task = findTask(taskId)
     if (task) {
-      // 级联清理 blob/cover
       if (task.videoBlobId) await deleteBlob(task.videoBlobId)
       if (task.coverImageId) await deleteCover(task.coverImageId)
       if (task.lastFrameImageId) await deleteCover(task.lastFrameImageId)
+      // 清理输入素材：仅删除不被其他任务引用的
+      const otherAssetIds = new Set(
+        tasks.value.filter((t) => t.id !== taskId).flatMap((t) => t.assetIds),
+      )
+      for (const assetId of task.assetIds) {
+        if (otherAssetIds.has(assetId)) continue
+        const asset = await getAsset(assetId)
+        if (asset?.blobId) await deleteBlob(asset.blobId)
+        await deleteAsset(assetId)
+      }
     }
-    tasks.value = tasks.value.filter((t) => t.id !== taskId)
     await dbDeleteTask(taskId)
+    tasks.value = tasks.value.filter((item) => item.id !== taskId)
   }
 
-  /**
-   * 续帧：用父任务的末帧作为新任务的首帧，复用父任务参数创建并执行新任务。
-   * 父任务须已生成末帧（lastFrameImageId），否则返回错误。
-   */
+  async function clearAllTasks(): Promise<{ removed: number; failed: number }> {
+    let removed = 0
+    let failed = 0
+    for (const task of [...tasks.value]) {
+      try {
+        await removeTask(task.id)
+        removed += 1
+      } catch (error) {
+        failed += 1
+        notifyStorageError(error)
+      }
+    }
+    return { removed, failed }
+  }
+
   async function continueFromTask(parentId: string): Promise<{ ok: boolean; error?: string; taskId?: string }> {
     const parent = findTask(parentId)
     if (!parent) return { ok: false, error: tr('error.continueSourceMissing') }
     if (!parent.lastFrameImageId) return { ok: false, error: tr('error.continueNoLastFrame') }
 
-    // 取末帧 cover dataUrl，转成 asset 作为新任务首帧
-    const cover = await getCover(parent.lastFrameImageId)
-    if (!cover) return { ok: false, error: tr('error.continueCoverLost') }
-    // 把末帧 dataUrl 落成 blob + asset
-    const blob = await dataUrlToBlob(cover.dataUrl)
-    const blobId = generateId()
-    await putBlob({ id: blobId, buffer: await blob.arrayBuffer(), mime: blob.type || 'image/png' })
-    const assetId = generateId()
-    await putAsset({
-      id: assetId,
-      role: 'firstFrame',
-      kind: 'image',
-      blobId,
-      name: `续帧-${parentId.slice(0, 8)}.png`,
-      mime: blob.type || 'image/png',
-      size: blob.size,
-      createdAt: Date.now(),
-    })
+    try {
+      const cover = await getCover(parent.lastFrameImageId)
+      if (!cover) return { ok: false, error: tr('error.continueCoverLost') }
+      const blob = await dataUrlToBlob(cover.dataUrl)
+      const blobId = generateId()
+      const assetId = generateId()
+      const asset: StoredAsset = {
+        id: assetId,
+        role: 'firstFrame',
+        kind: 'image',
+        blobId,
+        name: `续帧-${parentId.slice(0, 8)}.png`,
+        mime: blob.type || 'image/png',
+        size: blob.size,
+        createdAt: Date.now(),
+      }
 
-    // 用 composer 草稿参数 + parent 参数创建新任务
-    const composer = useComposerStore()
-    const task: VideoTask = {
-      id: generateId(),
-      prompt: composer.prompt.trim() || parent.prompt,
-      params: { ...parent.params, returnLastFrame: true },
-      assetIds: [assetId],
-      providerId: parent.providerId,
-      providerKind: parent.providerKind,
-      status: 'queued',
-      recoverable: false,
-      error: null,
-      createdAt: Date.now(),
-      finishedAt: null,
-      elapsed: null,
-      parentTaskId: parentId,
+      const composer = useComposerStore()
+      const task: VideoTask = {
+        id: generateId(),
+        prompt: composer.prompt.trim() || parent.prompt,
+        params: { ...parent.params, returnLastFrame: true },
+        assetIds: [assetId],
+        providerId: parent.providerId,
+        providerKind: parent.providerKind,
+        status: 'queued',
+        recoverable: false,
+        error: null,
+        createdAt: Date.now(),
+        finishedAt: null,
+        elapsed: null,
+        parentTaskId: parentId,
+      }
+
+      await putContinueFrame({
+        blob: { id: blobId, buffer: await blob.arrayBuffer(), mime: blob.type || 'image/png' },
+        asset,
+        task,
+      })
+      tasks.value.unshift(task)
+      void runner.execute(task.id)
+      return { ok: true, taskId: task.id }
+    } catch (error) {
+      notifyStorageError(error)
+      return { ok: false, error: errorMessage(error) }
     }
-    tasks.value.unshift(task)
-    await putTask(task)
-    void executeTask(task.id)
-    return { ok: true, taskId: task.id }
   }
 
-  // —— 初始化：从 DB 加载并恢复未完成任务 ——
   async function initTasks() {
     if (isInitialized.value) return
     const all = await getAllTasks()
-    all.sort((a, b) => b.createdAt - a.createdAt)
+    all.sort((left, right) => right.createdAt - left.createdAt)
     tasks.value = all
     isInitialized.value = true
-    log.info('task', tr('log.initLoaded', { n: all.length }), {
-      running: all.filter((t) => t.status === 'running').length,
-      queued: all.filter((t) => t.status === 'queued').length,
-      succeeded: all.filter((t) => t.status === 'succeeded').length,
-      failed: all.filter((t) => t.status === 'failed').length,
-    })
 
-    for (const t of all) {
-      // 有 remoteTaskId 且处于活跃态（running/queued/recoverable）：恢复轮询
-      if (t.remoteTaskId && (t.status === 'running' || t.status === 'queued' || t.recoverable)) {
-        log.info('task', tr('log.taskRecovered', { id: t.id, status: t.status, remote: t.remoteTaskId }), undefined, t.id)
-        // 确保状态为 running 以便 UI 显示
-        if (t.status === 'queued') await updateTask(t.id, { status: 'running' })
-        setTimeout(() => void startPolling(t.id), 0)
-      } else if (t.status === 'running' || t.status === 'queued') {
-        // 活跃但无 remoteTaskId（submit 阶段刷新中断）：无法恢复，明确标记
-        log.warn('task', tr('log.taskInterrupted', { id: t.id }), undefined, t.id)
-        await updateTask(t.id, {
+    for (const task of all) {
+      if (task.remoteTaskId && (task.status === 'running' || task.status === 'queued' || task.recoverable)) {
+        if (task.status === 'queued') await updateTask(task.id, { status: 'running' })
+        setTimeout(() => void runner.resumePolling(task.id), 0)
+      } else if (task.status === 'running' || task.status === 'queued') {
+        await updateTask(task.id, {
           status: 'failed',
           error: tr('error.submitInterrupted'),
           recoverable: false,
@@ -519,135 +289,77 @@ export const useTasksStore = defineStore('tasks', () => {
     }
   }
 
-  /**
-   * 取可播放视频 URL：优先用本地 blob 创建 object URL，否则回退远程 URL。
-   * 调用方负责在用完后释放返回的 blob: URL。
-   */
   async function resolveVideoUrl(task: VideoTask): Promise<string | null> {
     if (task.videoBlobId) {
       const stored = await getBlob(task.videoBlobId)
-      if (stored) {
-        const blob = new Blob([stored.buffer], { type: stored.mime })
-        return URL.createObjectURL(blob)
-      }
+      if (stored) return URL.createObjectURL(new Blob([stored.buffer], { type: stored.mime }))
     }
     return task.videoUrl ?? null
   }
 
-  // cover 与末帧都存为 cover 记录（dataUrl），共用同一段解析逻辑
-  async function resolveCoverDataUrl(coverImageId?: string): Promise<string | null> {
-    if (!coverImageId) return null
-    const cover = await getCover(coverImageId)
-    return cover?.dataUrl ?? null
+  async function resolveCoverDataUrl(id?: string): Promise<string | null> {
+    if (!id) return null
+    return (await getCover(id))?.dataUrl ?? null
   }
 
-  async function resolveCoverUrl(task: VideoTask): Promise<string | null> {
-    return resolveCoverDataUrl(task.coverImageId)
-  }
-
-  async function resolveLastFrameUrl(task: VideoTask): Promise<string | null> {
-    return resolveCoverDataUrl(task.lastFrameImageId)
-  }
-
-  /**
-   * 续帧链：给定任务，返回从最早祖先到该任务、再到其后代的完整链路（按时间正序）。
-   * 用于详情弹窗展示同一条续帧谱系。
-   */
   function getTaskChain(taskId: string): VideoTask[] {
-    const byId = new Map(tasks.value.map((t) => [t.id, t]))
-    // 向上追溯祖先
+    const byId = new Map(tasks.value.map((task) => [task.id, task]))
     const ancestors: VideoTask[] = []
     let current = byId.get(taskId)
-    while (current?.parentTaskId) {
+    const visited = new Set<string>()
+    while (current?.parentTaskId && !visited.has(current.parentTaskId)) {
+      visited.add(current.parentTaskId)
       const parent = byId.get(current.parentTaskId)
       if (!parent) break
       ancestors.unshift(parent)
       current = parent
     }
-    // 向下递归后代（BFS，按 createdAt 排序）
     const descendants: VideoTask[] = []
-    const queue: string[] = [taskId]
+    const queue = [taskId]
     while (queue.length) {
       const id = queue.shift()!
       const children = tasks.value
-        .filter((t) => t.parentTaskId === id)
-        .sort((a, b) => a.createdAt - b.createdAt)
-      for (const c of children) {
-        descendants.push(c)
-        queue.push(c.id)
+        .filter((task) => task.parentTaskId === id && !visited.has(task.id))
+        .sort((left, right) => left.createdAt - right.createdAt)
+      for (const child of children) {
+        visited.add(child.id)
+        descendants.push(child)
+        queue.push(child.id)
       }
     }
     const self = byId.get(taskId)
     return [...ancestors, ...(self ? [self] : []), ...descendants]
   }
 
-  // —— 数据导出：tasks + 素材/blobs/covers ——
   async function exportData(): Promise<string> {
-    const [assets, blobs, covers] = await Promise.all([getAllAssets(), getAllBlobs(), getAllCovers()])
-    // ArrayBuffer 无法 JSON 序列化，转 number[]
-    const blobsSerializable = blobs.map((b) => ({
-      id: b.id,
-      mime: b.mime,
-      buffer: Array.from(new Uint8Array(b.buffer)),
-    }))
-    const payload = {
-      version: 1,
-      exportedAt: Date.now(),
-      tasks: tasks.value,
-      assets,
-      blobs: blobsSerializable,
-      covers,
-    }
-    return JSON.stringify(payload)
+    return exportTaskBackup(tasks.value)
   }
 
-  // —— 数据导入 ——
-  async function importData(json: string): Promise<{ count: number }> {
-    const data = JSON.parse(json) as {
-      tasks?: VideoTask[]
-      assets?: StoredAsset[]
-      blobs?: Array<{ id: string; buffer: number[]; mime: string }>
-      covers?: Array<{ id: string; dataUrl: string }>
+  async function importData(json: string): Promise<{ imported: number; skipped: number }> {
+    try {
+      const result = await importTaskBackup(json, tasks.value, tr('error.importedNotResumable'))
+      tasks.value.push(...result.tasks)
+      tasks.value.sort((left, right) => right.createdAt - left.createdAt)
+      return { imported: result.imported, skipped: result.skipped }
+    } catch (error) {
+      notifyStorageError(error)
+      throw error
     }
-    const incomingTasks = Array.isArray(data.tasks) ? data.tasks : []
-    const existingIds = new Set(tasks.value.map((t) => t.id))
-    let count = 0
-    for (const task of incomingTasks) {
-      if (existingIds.has(task.id)) continue
-      // 运行中的任务无法恢复轮询，标记为失败
-      if (task.status === 'running') {
-        task.status = 'failed'
-        task.error = task.error || tr('error.importedNotResumable')
-      }
-      task.recoverable = false
-      await putTask(task)
-      tasks.value.push(task)
-      count++
-    }
-    for (const a of data.assets ?? []) await putAsset(a)
-    for (const b of data.blobs ?? []) {
-      const buffer = new ArrayBuffer(b.buffer.length)
-      new Uint8Array(buffer).set(b.buffer)
-      await putBlob({ id: b.id, buffer, mime: b.mime })
-    }
-    for (const c of data.covers ?? []) await putCover(c)
-    tasks.value.sort((a, b) => b.createdAt - a.createdAt)
-    return { count }
   }
 
   return {
     tasks,
     isInitialized,
     submitTask,
-    executeTask,
     cancelTask,
     retryTask,
     removeTask,
+    clearAllTasks,
     continueFromTask,
     initTasks,
     resolveVideoUrl,
-    resolveCoverUrl,
-    resolveLastFrameUrl,
+    resolveCoverUrl: (task: VideoTask) => resolveCoverDataUrl(task.coverImageId),
+    resolveLastFrameUrl: (task: VideoTask) => resolveCoverDataUrl(task.lastFrameImageId),
     getTaskChain,
     exportData,
     importData,
@@ -655,7 +367,6 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 })
 
-function errMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  return String(err)
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }

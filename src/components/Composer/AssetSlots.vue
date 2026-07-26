@@ -5,7 +5,7 @@ import { useToastStore } from '@/stores/toast'
 import { useI18nStore } from '@/stores/i18n'
 import { ingestFile, fileMatchesRole } from '@/lib/asset'
 import { SEEDANCE_REFERENCE_LIMITS } from '@/config/models'
-import { getBlob } from '@/db/repos'
+import { getBlob, putAsset } from '@/db/repos'
 import { arrayBufferToBlob, isDirectUrl } from '@/lib/blob'
 import type { AssetRole, StoredAsset } from '@/types'
 
@@ -70,14 +70,18 @@ async function handleFiles(role: AssetRole, files: FileList | null, autoRole: bo
 function swapKeyframes() {
   const first = assetsOf('firstFrame')[0]
   const last = assetsOf('lastFrame')[0]
-  // 交换首尾帧：各自移除后以对方角色重新加入（仅一帧存在时退化为单方向搬移）
+  // 交换首尾帧：各自移除后以对方角色重新加入，并持久化到 IndexedDB
   if (first) {
+    const updated = { ...first, role: 'lastFrame' as const }
     composer.removeAsset(first.id)
-    composer.addAsset({ ...first, role: 'lastFrame' })
+    composer.addAsset(updated)
+    void putAsset(updated)
   }
   if (last) {
+    const updated = { ...last, role: 'firstFrame' as const }
     composer.removeAsset(last.id)
-    composer.addAsset({ ...last, role: 'firstFrame' })
+    composer.addAsset(updated)
+    void putAsset(updated)
   }
 }
 

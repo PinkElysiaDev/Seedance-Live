@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { StoredAsset, VideoParams } from '@/types'
 import { defaultParams } from '@/config/options'
+import { resolutionsForModel } from '@/config/models'
 import { getAssets } from '@/db/repos'
 
 const STORAGE_KEY = 'seedance-live:composer'
@@ -115,7 +116,7 @@ export const useComposerStore = defineStore('composer', () => {
   // 切换模型时按模型能力钳制分辨率
   function setModel(model: VideoParams['model']) {
     const next = { ...params.value, model }
-    const allowed = model.endsWith('fast') ? ['480p', '720p', '4K'] : ['480p', '720p', '1080p', '4K']
+    const allowed = resolutionsForModel(model)
     if (!allowed.includes(next.resolution)) next.resolution = '720p'
     params.value = next
   }

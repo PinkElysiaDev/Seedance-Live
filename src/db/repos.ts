@@ -1,6 +1,6 @@
 import type { StoredAsset, VideoTask } from '@/types'
 import { toRaw } from 'vue'
-import { withStore, STORE_TASKS, STORE_ASSETS, STORE_BLOBS, STORE_COVERS } from './index'
+import { withStore, withTransaction, STORE_TASKS, STORE_ASSETS, STORE_BLOBS, STORE_COVERS } from './index'
 
 // Pinia state 是 deep reactive（Proxy），IndexedDB 的 structured clone 不能克隆 Proxy。
 // toRaw 只脱最外层，嵌套的 params/数组仍是 Proxy，structuredClone 仍会失败。
@@ -37,9 +37,17 @@ export function getAsset(id: string): Promise<StoredAsset | undefined> {
 }
 
 export function getAssets(ids: string[]): Promise<StoredAsset[]> {
-  return Promise.all(ids.map((id) => getAsset(id))).then(
-    (arr) => arr.filter((a): a is StoredAsset => !!a),
-  )
+  if (!ids.length) return Promise.resolve([])
+  return withTransaction(STORE_ASSETS, 'readonly', (stores) => {
+    const requests = ids.map((id) => {
+      const req = stores[STORE_ASSETS].get(id) as IDBRequest<StoredAsset | undefined>
+      return new Promise<StoredAsset | undefined>((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
+    })
+    return Promise.all(requests)
+  }).then((arr) => arr.filter((a): a is StoredAsset => !!a))
 }
 
 export function deleteAsset(id: string): Promise<undefined> {
@@ -93,4 +101,51 @@ export function deleteCover(id: string): Promise<undefined> {
 
 export function getAllCovers(): Promise<StoredCover[]> {
   return withStore(STORE_COVERS, 'readonly', (s) => s.getAll() as IDBRequest<StoredCover[]>)
+}
+
+export interface TaskResultWrite {
+  task: VideoTask
+  video?: StoredBlob
+  covers?: StoredCover[]
+}
+
+export function putTaskResult({ task, video, covers = [] }: TaskResultWrite): Promise<void> {
+  const storeNames = [STORE_TASKS]
+  if (video) storeNames.push(STORE_BLOBS)
+  if (covers.length) storeNames.push(STORE_COVERS)
+  return withTransaction(storeNames, 'readwrite', (stores) => {
+    if (video) stores[STORE_BLOBS].put(video)
+    for (const cover of covers) stores[STORE_COVERS].put(cover)
+    stores[STORE_TASKS].put(toStorable(task))
+  }).then(() => undefined)
+}
+
+export interface ImportedDataWrite {
+  tasks: VideoTask[]
+  assets: StoredAsset[]
+  blobs: StoredBlob[]
+  covers: StoredCover[]
+}
+
+export interface ContinueFrameWrite {
+  blob: StoredBlob
+  asset: StoredAsset
+  task: VideoTask
+}
+
+export function putContinueFrame({ blob, asset, task }: ContinueFrameWrite): Promise<void> {
+  return withTransaction([STORE_BLOBS, STORE_ASSETS, STORE_TASKS], 'readwrite', (stores) => {
+    stores[STORE_BLOBS].put(blob)
+    stores[STORE_ASSETS].put(toStorable(asset))
+    stores[STORE_TASKS].put(toStorable(task))
+  }).then(() => undefined)
+}
+
+export function putImportedData(data: ImportedDataWrite): Promise<void> {
+  return withTransaction([STORE_TASKS, STORE_ASSETS, STORE_BLOBS, STORE_COVERS], 'readwrite', (stores) => {
+    for (const task of data.tasks) stores[STORE_TASKS].put(toStorable(task))
+    for (const asset of data.assets) stores[STORE_ASSETS].put(toStorable(asset))
+    for (const blob of data.blobs) stores[STORE_BLOBS].put(blob)
+    for (const cover of data.covers) stores[STORE_COVERS].put(cover)
+  }).then(() => undefined)
 }
